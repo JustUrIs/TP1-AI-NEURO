@@ -42,3 +42,7 @@ TP1_GoldDiceRL.zip
 !gold_dice_rl/artifacts/classic_*.pkl
 
 informe/_*.png
+
+# Boilerplate que genera Next.js para agentes, no es parte del trabajo
+web/AGENTS.md
+web/CLAUDE.md

@@ -6,29 +6,30 @@
 
 \documentclass[10pt,a4paper]{article}
 
+\usepackage{lmodern}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[spanish,es-noquoting,es-nodecimaldot]{babel}
-\usepackage[margin=1.85cm,top=1.6cm,bottom=1.6cm]{geometry}
+\usepackage[margin=1.55cm,top=1.3cm,bottom=1.2cm]{geometry}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{microtype}
 \usepackage{titlesec}
-\usepackage{caption}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage[hidelinks]{hyperref}
 
 \definecolor{acento}{HTML}{1B3A6B}
 \definecolor{tenue}{HTML}{5B6270}
 
 \titleformat{\section}{\normalfont\bfseries\color{acento}\large}{\thesection.}{0.5em}{}
-\titlespacing*{\section}{0pt}{8pt plus 2pt minus 2pt}{3pt}
-\setlength{\parskip}{3.2pt}
+\titlespacing*{\section}{0pt}{6pt plus 1pt minus 1pt}{2pt}
+\linespread{0.95}
+\setlength{\parskip}{2.0pt}
 \setlength{\parindent}{0pt}
-\renewcommand{\arraystretch}{1.12}
-\captionsetup{font=small,labelfont=bf,textfont=color{tenue},skip=4pt}
+\renewcommand{\arraystretch}{1.06}
 
 % Números alineados en las tablas.
 \newcolumntype{N}{>{\raggedleft\arraybackslash}p{1.9cm}}
@@ -132,7 +133,7 @@ se concentra en los estados poco visitados, y la política greedy se deja arrast
 
 \vspace{2pt}
 {\small
-\begin{tabular}{@{}l l p{10.4cm}@{}}
+\begin{tabular}{@{}l l p{11.2cm}@{}}
 \toprule
 \textbf{Hiperparámetro} & \textbf{Valor} & \textbf{Por qué} \\
 \midrule
@@ -258,7 +259,7 @@ muestras representativas.
 
 \vspace{2pt}
 \begin{center}
-\includegraphics[width=\linewidth]{figura.png}
+\includegraphics[width=0.88\linewidth]{figura.png}
 \end{center}
 \vspace{-6pt}
 {\footnotesize\color{tenue} Izquierda: el agente construye un motor casi igual al óptimo pero no
