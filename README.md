@@ -123,3 +123,5 @@ python package.py
   línea por línea: los casos borde que no están en el enunciado y cambian la
   estrategia.
 - [`docs/02_RESULTADOS.md`](docs/02_RESULTADOS.md) — todas las tablas y ablaciones.
+- [`docs/03_QUE_CONSTRUIMOS.md`](docs/03_QUE_CONSTRUIMOS.md) — de qué partimos, qué archivo
+  hace qué, y en qué orden fueron pasando las cosas. Escrito para leerse sin saber RL.
