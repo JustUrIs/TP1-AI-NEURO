@@ -1,0 +1,29 @@
+HORIZON = 30
+
+INITIAL_GOLD = 0
+INITIAL_POINTS = 0
+INITIAL_NUM_DICE = 1
+INITIAL_DICE_BONUS = 0
+INITIAL_SHIELDS = 0
+INITIAL_STORED_VALUE = 0
+
+STORM_PROB = 0.15
+
+DICE_FACES = [1, 2, 3, 4, 5, 6]
+
+BASE_NEW_DICE_COST = 18
+NEW_DICE_COST_GROWTH = 8
+
+BASE_UPGRADE_COST = 8
+UPGRADE_COST_GROWTH = 8
+
+SHIELD_COST = 5
+STORE_DIE_COST = 4
+
+
+def get_new_dice_cost(num_dice: int) -> int:
+    return BASE_NEW_DICE_COST + NEW_DICE_COST_GROWTH * (int(num_dice) - 1)
+
+
+def get_upgrade_cost(dice_bonus: int) -> int:
+    return BASE_UPGRADE_COST + UPGRADE_COST_GROWTH * int(dice_bonus)
