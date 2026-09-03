@@ -161,20 +161,27 @@ footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--linea);color:
 .sacude{animation:sacude .4s}
 @keyframes sacude{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 </style>
+<link rel="stylesheet" href="redesign.css">
 </head>
 <body>
 <div class="envoltorio">
 
   <header class="tope">
-    <div>
-      <div class="marca">Gold <span>Dice</span></div>
-      <p class="bajada">Treinta turnos para convertir dados en puntos. Al final te decimos cuánto de tu
-        resultado fueron tus decisiones y cuánto fue suerte — comparándote contra el juego resuelto exacto.</p>
+    <div class="nav-marca">
+      <div class="marca"><span class="sello" aria-hidden="true">••<i>•</i></span>Gold Dice</div>
+      <div class="nav-acciones"><button class="nav-link" id="verReglas" type="button">Cómo funciona</button><span>Sin cuenta. Sin rastreo.</span></div>
     </div>
-    <div class="refs">
-      <div class="ref"><b class="num oro">644</b><small>juego perfecto</small></div>
-      <div class="ref"><b class="num">527</b><small>mejor agente</small></div>
-      <div class="ref"><b class="num">343</b><small>baseline</small></div>
+    <div class="hero">
+      <div class="hero-copy">
+        <h1>Treinta turnos.<br>Una fortuna.</h1>
+        <p>Hacé crecer tu mesa, protegé lo ganado y decidí cuánto dejar expuesto. Al final separamos tus decisiones de tu suerte.</p>
+        <button class="btn lleno hero-cta" id="irAJugar" type="button">Sentarme a la mesa</button>
+      </div>
+      <button class="fortune-demo" id="heroRoll" type="button" aria-label="Tirar los dados de demostración">
+        <span class="demo-caption">Tocá para tentar al azar</span>
+        <span class="demo-dice" aria-hidden="true"><i>3</i><i>5</i><i>6</i></span>
+        <span class="demo-balance"><b><em id="demoOro">14</em> oro</b><small id="demoMensaje">todavía está en riesgo</small></span>
+      </button>
     </div>
   </header>
 
@@ -182,31 +189,21 @@ footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--linea);color:
   <section id="inicio">
     <div class="tablero">
       <div class="apilado">
-        <div>
-          <div class="rotulo">Cómo se juega</div>
-          <p class="nota" style="margin-top:14px">
-            Cada turno tirás tus dados y el oro se suma. Con ese oro podés hacer <b>una sola cosa</b>:
-            convertirlo en puntos, comprar un dado, mejorar todos los dados, comprar un escudo,
-            o pagar 4 para volver a cobrar tu mejor dado el turno siguiente.
-          </p>
-          <p class="nota" style="margin-top:11px">
-            Después de tu jugada, con probabilidad <b>15 %</b> cae una tormenta y te parte el oro al medio.
-            Los puntos no se tocan: ya están guardados. Un escudo bloquea una tormenta.
-          </p>
-          <p class="nota" style="margin-top:11px">
-            Y el detalle que decide todo: <b>en el turno 30 no hay tirada después</b>, así que el oro
-            que no hayas convertido se evapora.
-          </p>
-          <p class="nota" style="margin-top:11px;color:var(--debil)">
-            No te vamos a marcar la jugada buena antes de que elijas — eso arruina el juego. Te la
-            mostramos después, con lo que costó la diferencia.
-          </p>
-        </div>
+        <details class="reglas" id="reglas">
+          <summary>Aprendé las reglas en 40 segundos</summary>
+          <div class="reglas-grid">
+            <p><b>1. Cobrás.</b> Cada turno, tus dados producen oro.</p>
+            <p><b>2. Elegís.</b> Guardalo como puntos o invertí para producir más.</p>
+            <p><b>3. Te arriesgás.</b> Una tormenta puede partir el oro suelto a la mitad.</p>
+            <p><b>4. Cerrás.</b> En el turno 30, lo que no convertiste desaparece.</p>
+          </div>
+        </details>
 
         <div>
-          <div class="rotulo">Tu nombre</div>
+          <div class="rotulo">Tu lugar en la mesa</div>
           <div style="margin-top:14px;max-width:320px">
-            <input type="text" id="nombre" maxlength="20" placeholder="Para la tabla. Sin cuenta, sin mail." autocomplete="off">
+            <input type="text" id="nombre" maxlength="20" placeholder="Tu nombre o apodo" autocomplete="off">
+            <p class="nota privacidad-ranking">Al terminar, tu nombre y resultado entran al ranking global.</p>
           </div>
         </div>
 
@@ -217,17 +214,18 @@ footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--linea);color:
         </div>
 
         <div class="fila">
-          <button class="btn lleno" id="empezar">Jugar 30 turnos</button>
+          <button class="btn lleno" id="empezar">Empezar la partida</button>
           <span class="nota" id="estadoCarga">Cargando los agentes…</span>
         </div>
       </div>
 
       <div class="apilado">
         <div>
-          <div class="rotulo">Los rivales</div>
+          <div class="rotulo">Promedios históricos</div>
           <div id="listaRivales" style="margin-top:6px"></div>
         </div>
         <div id="tablaInicio"></div>
+        <div id="tablaGlobal"></div>
       </div>
     </div>
   </section>
@@ -289,10 +287,8 @@ footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--linea);color:
   </section>
 
   <footer>
-    Trabajo Práctico 1 — Reinforcement Learning, Inteligencia Artificial y Neurociencias (UTDT).
-    Los agentes corren enteros en tu navegador, sin llamar a ningún servidor. El análisis usa la
-    solución exacta del juego, calculada por programación dinámica: <span class="num">642</span> puntos
-    es lo máximo que se puede esperar jugando perfecto.
+    <b>Gold Dice</b> procesa la partida en tu navegador. Al terminar, publica tu nombre y resultado
+    en la tabla global. La mesa compara tus decisiones con una solución exacta por programación dinámica.
   </footer>
 </div>
 
@@ -330,6 +326,44 @@ function guardarPartida(fila){
 }
 function recordarNombre(n){ try{ localStorage.setItem("goldDice.nombre", n); }catch(e){} }
 function nombreGuardado(){ try{ return localStorage.getItem("goldDice.nombre") || ""; }catch(e){ return ""; } }
+
+function pintarRankingGlobal(destino, filas){
+  if(!destino) return;
+  var html = '<div class="rotulo">Ranking global</div>';
+  if(!filas || !filas.length){
+    html += '<p class="nota ranking-estado">Todavía no hay resultados. Podés inaugurar la mesa.</p>';
+  } else {
+    html += '<table class="tabla tabla-global"><thead><tr><th>#</th><th>Jugador</th><th class="der">Puntos</th></tr></thead><tbody>';
+    filas.slice(0,10).forEach(function(f, i){
+      html += '<tr><td class="num">' + (i+1) + '</td><td>' + escapar(f.nombre) +
+        '</td><td class="der num"><b>' + f.puntaje + '</b></td></tr>';
+    });
+    html += '</tbody></table><p class="nota ranking-estado">Resultados de jugadores en todo el mundo.</p>';
+  }
+  destino.innerHTML = html;
+}
+
+async function cargarRankingGlobal(destino){
+  if(!destino) return;
+  destino.innerHTML = '<div class="rotulo">Ranking global</div><p class="nota ranking-estado">Buscando resultados…</p>';
+  try {
+    var respuesta = await fetch("/api/scores", { cache:"no-store" });
+    if(!respuesta.ok) throw new Error("ranking unavailable");
+    var datos = await respuesta.json();
+    pintarRankingGlobal(destino, datos.scores);
+  } catch(e){
+    destino.innerHTML = '<div class="rotulo">Ranking global</div><p class="nota ranking-estado">La tabla global no está disponible. Tu partida igual se guarda en este dispositivo.</p>';
+  }
+}
+
+async function enviarResultadoGlobal(fila){
+  var respuesta = await fetch("/api/scores", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify(fila)
+  });
+  if(!respuesta.ok) throw new Error("score was not saved");
+}
 
 function pintarTabla(destino, orden){
   orden = orden || "nota";
@@ -389,9 +423,11 @@ function armarInicio(){
       '<span class="p num">'+Math.round(a.mean)+'</span></div>';
   }).join("") +
   '<div class="rival"><b class="oro">Juego perfecto</b><small>no aprende: es el juego resuelto exacto</small>' +
-  '<span class="p num oro">644</span></div>';
+  '<span class="p num oro">644</span></div>' +
+  '<p class="nota" style="margin-top:12px">Estos valores son medias de muchas partidas. Al terminar la tuya vas a ver qué hizo cada rival con <b>tu misma suerte</b>.</p>';
 
   pintarTabla($("tablaInicio"));
+  cargarRankingGlobal($("tablaGlobal"));
 }
 
 // ----------------------------------------------------------------- partida
@@ -615,6 +651,44 @@ function abrirFicha(titulo, e){
 function cerrarFicha(){ $("modal").classList.add("oculto"); }
 document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarFicha(); });
 
+// Todos vuelven a jugar desde cero con la semilla del humano. Esto hace que
+// dados y tormentas coincidan aunque el modo elegido no los mostrara en vivo.
+function simularAgenteMismaSemilla(agente){
+  var p = new M.Partida(M.azar(semilla));
+  var limite = 0;
+  while(!p.terminada && limite++ < 31){
+    var mejor = agente.ranking(p.situacion())[0];
+    p.jugar(mejor.accion, mejor.cuanto);
+  }
+  return p.puntos;
+}
+
+function comparacionMismaSemilla(nombre, puntaje){
+  var filas = [{ nombre:nombre, puntaje:puntaje, humano:true }];
+  mundo.agentes.forEach(function(agente){
+    filas.push({ nombre:agente.label, puntaje:simularAgenteMismaSemilla(agente), humano:false });
+  });
+  filas.push({ nombre:"DP", puntaje:simularAgenteMismaSemilla(mundo.dp), humano:false });
+  filas.sort(function(a,b){ return b.puntaje - a.puntaje || (a.humano ? -1 : 1); });
+
+  var puesto = 1;
+  filas.forEach(function(f, i){
+    if(i > 0 && f.puntaje < filas[i-1].puntaje) puesto = i + 1;
+    f.puesto = puesto;
+  });
+  var vos = filas.filter(function(f){ return f.humano; })[0];
+  return '<div class="comparacion-semilla"><div class="rotulo">Esta partida exacta</div>' +
+    '<p class="nota">Mismos dados y mismas tormentas para todos. Acá no hay promedios históricos.</p>' +
+    '<div class="puesto-grande"><b>' + vos.puesto + '°</b><span>tu puesto entre ' + filas.length + '</span></div>' +
+    '<table class="tabla tabla-semilla"><thead><tr><th>Puesto</th><th>Jugador</th><th class="der">Puntos</th></tr></thead><tbody>' +
+    filas.map(function(f){
+      return '<tr class="' + (f.humano ? 'es-vos' : '') + '"><td class="num">' + f.puesto + '°</td><td>' +
+        (f.humano ? '<b>Vos · ' + escapar(f.nombre) + '</b>' : escapar(f.nombre)) +
+        '</td><td class="der num"><b>' + f.puntaje + '</b></td></tr>';
+    }).join("") + '</tbody></table>' +
+    '<p class="semilla-id">Partida #' + semilla.toString(16).toUpperCase().padStart(6,"0") + '</p></div>';
+}
+
 // ------------------------------------------------------------------- final
 function terminar(){
   var an = mundo.dp.analizar(registro, partida.historia, pistasUsadas);
@@ -622,6 +696,15 @@ function terminar(){
   if(nombre !== "Anónimo") recordarNombre(nombre);
   guardarPartida({ nombre:nombre, puntaje:an.puntaje, nota:an.nota, suerte:an.suerte,
                    semilla:semilla, cuando:Date.now() });
+  enviarResultadoGlobal({ nombre:nombre, puntaje:an.puntaje, nota:an.nota,
+    suerte:an.suerte, semilla:semilla }).then(function(){
+      var estado = $("estadoRankingFinal");
+      if(estado) estado.textContent = "Resultado publicado en la tabla global.";
+      cargarRankingGlobal($("tablaFinalGlobal"));
+    }).catch(function(){
+      var estado = $("estadoRankingFinal");
+      if(estado) estado.textContent = "No pudimos publicar este resultado. Quedó guardado en tu dispositivo.";
+    });
 
   $("partida").classList.add("oculto");
   $("final").classList.remove("oculto");
@@ -657,6 +740,8 @@ function terminar(){
 
   var peores = an.peores.filter(function(t){ return t.perdido > 0.05; });
   $("ladoFinalDer").innerHTML =
+    comparacionMismaSemilla(nombre, an.puntaje) +
+    '<div id="tablaFinalGlobal"></div><p class="nota" id="estadoRankingFinal">Publicando tu resultado…</p>' +
     '<div><div class="rotulo">Tus jugadas más caras</div>' +
       (peores.length ?
         '<table class="tabla" style="margin-top:10px"><thead><tr><th class="der">T</th><th>Jugaste</th>' +
@@ -692,6 +777,29 @@ $("cancelarPuntuar").onclick = function(){
 };
 $("btnPista").onclick = pedirPista;
 $("empezar").onclick = empezar;
+
+// La portada se entiende tocándola: una tirada breve antes de leer reglas.
+$("heroRoll").onclick = function(){
+  var demo = this;
+  var caras = Array.prototype.slice.call(demo.querySelectorAll(".demo-dice i"));
+  demo.classList.remove("rolling");
+  void demo.offsetWidth;
+  demo.classList.add("rolling");
+  var suma = 0;
+  caras.forEach(function(d){
+    var valor = 1 + Math.floor(Math.random() * 6);
+    d.textContent = valor;
+    suma += valor;
+  });
+  $("demoOro").textContent = suma;
+  $("demoMensaje").textContent = suma >= 14 ? "una tirada para invertir" : "¿lo guardás o arriesgás?";
+  window.setTimeout(function(){ demo.classList.remove("rolling"); }, 600);
+};
+$("irAJugar").onclick = function(){ $("inicio").scrollIntoView({behavior:"smooth", block:"start"}); };
+$("verReglas").onclick = function(){
+  $("reglas").open = true;
+  $("reglas").scrollIntoView({behavior:"smooth", block:"center"});
+};
 
 try {
   mundo = A.cargar(window.GOLD_DICE_DATA);
