@@ -1,5 +1,5 @@
 /*
- * Los agentes entrenados y el oraculo, corriendo en el navegador.
+ * Los agentes entrenados y la DP, corriendo en el navegador.
  *
  * Nada de esto llama a ninguna API. Los pesos vienen embebidos en data.js y
  * todo se calcula acá, asi que el rival responde al instante y la pagina anda
@@ -13,8 +13,8 @@
  *   Tabulares la receta clasica, con el estado agrupado en casillas. Son las
  *             ablaciones del informe y juegan distinto, no solo peor
  *
- * Y aparte esta el oraculo, que no aprendio nada: es el juego resuelto exacto.
- * Con el se puede separar cuanto de tu resultado fue decision y cuanto suerte.
+ * La DP no aprendio: contiene el juego resuelto por programacion dinamica.
+ * Con ella se separa cuanto del resultado fue decision y cuanto fue suerte.
  */
 (function (global) {
   "use strict";
@@ -205,8 +205,8 @@
     }];
   };
 
-  // ---------------------------------------------------------------- oraculo
-  function Oraculo(meta) {
+  // ---------------------------------------------------------------- DP
+  function DP(meta) {
     this.datos = desb64(meta.data, Int16Array);
     this.escala = meta.scale;
     this.nodos = meta.nodes;
@@ -216,7 +216,7 @@
   }
 
   /** Puntos esperados ANTES de tirar los dados del turno t, con ese oro. */
-  Oraculo.prototype.u = function (t, oro, n, b, s) {
+  DP.prototype.u = function (t, oro, n, b, s) {
     if (t > M.HORIZON) return 0;
     n = Math.min(Math.max(n, 1), 9) - 1;
     b = Math.min(Math.max(b, 0), 8);
@@ -229,7 +229,7 @@
   };
 
   /** Cuanto vale terminar el turno con ese oro, contando tormenta y tirada. */
-  Oraculo.prototype.cola = function (t, oro, n, b, s, guardado) {
+  DP.prototype.cola = function (t, oro, n, b, s, guardado) {
     if (t >= M.HORIZON) return 0;
     guardado = guardado || 0;
     var queda = oro + guardado;
@@ -240,7 +240,7 @@
   };
 
   /** Lo que vale una jugada concreta, incluyendo cuanto oro puntuaste. */
-  Oraculo.prototype.valorDe = function (s, accion, cuanto) {
+  DP.prototype.valorDe = function (s, accion, cuanto) {
     if (accion === M.PUNTUAR) {
       var k = Math.max(0, Math.min(Math.floor(cuanto || 0), s.oro));
       return k + this.cola(s.turno, s.oro - k, s.dados, s.bonus, s.escudos);
@@ -250,7 +250,7 @@
     return r.puntos + this.cola(s.turno, e.oro, e.dados, e.bonus, e.escudos, e.guardado);
   };
 
-  Oraculo.prototype.ranking = function (s) {
+  DP.prototype.ranking = function (s) {
     var self = this;
     var out = [];
     legales(s).forEach(function (a) {
@@ -287,7 +287,7 @@
    * Las dos suman tu puntaje final, exacto. Es la misma idea con la que los
    * jugadores de poker separan una buena decision de un buen resultado.
    */
-  Oraculo.prototype.analizar = function (situaciones, historia, pistas) {
+  DP.prototype.analizar = function (situaciones, historia, pistas) {
     var self = this;
     var turnos = [];
     var perdidoTotal = 0;
@@ -329,12 +329,12 @@
       return m.kind === "champion" ? new Campeon(m) : new Tabular(m);
     });
     agentes.sort(function (a, b) { return b.mean - a.mean; });
-    return { agentes: agentes, oraculo: new Oraculo(datos.oracle), optimo: datos.optimal };
+    return { agentes: agentes, dp: new DP(datos.dp), optimo: datos.optimal };
   }
 
   global.GD.agentes = {
     cargar: cargar, legales: legales, resultado: resultado,
     etiqueta: etiqueta, cuentaAMano: cuentaAMano,
-    Campeon: Campeon, Tabular: Tabular, Oraculo: Oraculo,
+    Campeon: Campeon, Tabular: Tabular, DP: DP,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

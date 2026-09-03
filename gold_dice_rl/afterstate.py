@@ -158,7 +158,7 @@ def potential(afterstate: tuple) -> float:
     El termino de escudos parece un detalle y no lo es. Sin el, Phi valua
     BUY_SHIELD como "perder 5 de oro a cambio de nada", un sesgo sistematico
     contra la unica accion que hace posible acumular en el endgame. El
-    diagnostico contra el oraculo lo mostro sin ambiguedad: el error mas
+    el diagnostico contra la DP lo mostro sin ambiguedad: el error mas
     frecuente del agente era no comprar el escudo (1488 veces sobre 300
     partidas), y sin escudo terminaba con 174 de oro contra los 484 del optimo.
 

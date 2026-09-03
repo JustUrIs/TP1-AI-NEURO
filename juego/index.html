@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gold Dice — jugá contra los agentes</title>
-<meta name="description" content="Gold Dice RL: jugá contra agentes entrenados con aprendizaje por refuerzos y descubrí, contra la solución exacta del juego, cuánto de tu resultado fue decisión y cuánto fue suerte.">
+<meta name="description" content="Gold Dice RL: jugá contra agentes entrenados con Reinforcement Learning y compará tus decisiones con una solución por programación dinámica.">
 <style>
 /* ---------------------------------------------------------------------------
    El juego es contabilidad con dados: cada turno es una decisión sobre plata.
@@ -289,7 +289,7 @@ footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--linea);color:
   </section>
 
   <footer>
-    Trabajo Práctico 1 — Aprendizaje por Refuerzos, Inteligencia Artificial y Neurociencias (UTDT).
+    Trabajo Práctico 1 — Reinforcement Learning, Inteligencia Artificial y Neurociencias (UTDT).
     Los agentes corren enteros en tu navegador, sin llamar a ningún servidor. El análisis usa la
     solución exacta del juego, calculada por programación dinámica: <span class="num">642</span> puntos
     es lo máximo que se puede esperar jugando perfecto.
@@ -617,7 +617,7 @@ document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarF
 
 // ------------------------------------------------------------------- final
 function terminar(){
-  var an = mundo.oraculo.analizar(registro, partida.historia, pistasUsadas);
+  var an = mundo.dp.analizar(registro, partida.historia, pistasUsadas);
   var nombre = ($("nombre").value || "").trim() || nombreGuardado() || "Anónimo";
   if(nombre !== "Anónimo") recordarNombre(nombre);
   guardarPartida({ nombre:nombre, puntaje:an.puntaje, nota:an.nota, suerte:an.suerte,

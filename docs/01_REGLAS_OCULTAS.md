@@ -4,7 +4,7 @@
 > El enunciado describe el juego. El código **es** el juego. Cuando difieren, gana el código.
 >
 > Todo lo que está acá está verificado contra el código fuente y, donde correspondía, contra
-> el solver exacto (`oracle_dp.py`). Nada es una intuición.
+> la solución por programación dinámica (`sol_dp.cpp`).
 
 ---
 
@@ -153,7 +153,7 @@ La lectura tentadora es: "entonces gastar un turno cuesta lo que hubieras puntua
 el turno siguiente, y un solo `SCORE` convierte *todo* tu oro de una. Lo único que perdés
 por no puntuar es la exposición a **una** tormenta.
 
-Medido con el oráculo — `V*(puntuar todo)` contra `V*(pasar)` en el mismo estado:
+Medido con la DP — `V*(puntuar todo)` contra `V*(pasar)` en el mismo estado:
 
 | turno | oro | escudos | V\*(SCORE) | V\*(PASS) | **costo del turno** | |
 |---:|---:|---:|---:|---:|---:|---|
@@ -297,7 +297,7 @@ no con `n = 1000` y un número pelado. No es prolijidad: es la diferencia entre 
 
 ---
 
-## 8-bis. Qué hace realmente el juego óptimo (400 partidas del oráculo)
+## 8-bis. Qué hace la política de la DP (400 partidas simuladas)
 
 Todo lo anterior son piezas sueltas. Así se arman:
 
@@ -399,7 +399,8 @@ muerden y el número es sólido.
 1. **Un denominador honesto.** "Nuestro agente saca 610" no dice nada. "Nuestro agente
    captura el 95 % del óptimo teórico, contra el 54 % del baseline de la cátedra" dice todo.
 2. **Diagnóstico por decisión.** Para cada jugada del agente aprendido podemos calcular el
-   *arrepentimiento* exacto: `V*(s) − [r + V*(s′)]`. Eso nos dice **en qué turnos y en qué
+   pérdida por decisión: `V*(s) − [r + V*(s′)]`. Es la diferencia entre el valor de la mejor
+   acción y el de la acción elegida. Eso nos dice **en qué turnos y en qué
    estados** el agente se equivoca, en vez de solo cuánto. Es la diferencia entre "el modelo
    anda mal" y "el modelo sub-invierte en bonus entre los turnos 5 y 9".
 3. **Separar habilidad de suerte** (en el juego web): la diferencia entre lo que valía tu

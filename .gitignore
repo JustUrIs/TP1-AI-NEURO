@@ -4,38 +4,15 @@ __pycache__/
 .DS_Store
 
 # --- artefactos regenerables -------------------------------------------------
-# El oráculo pesa 52 MB y `python oracle_dp.py` lo recalcula en 17 segundos.
-gold_dice_rl/artifacts/oracle_u.npy
-
-# Checkpoints intermedios del barrido y de las corridas largas. El único que se
-# entrega es gold_dice_agent.pkl (lo fuerza la regla de más abajo).
-gold_dice_rl/artifacts/dbl_*.pkl
-gold_dice_rl/artifacts/sweep_*.pkl
-gold_dice_rl/artifacts/smoke*.pkl
-gold_dice_rl/artifacts/*_curve.npy
-gold_dice_rl/artifacts/log_*.txt
-
-# Datos de prueba: los regeneran los scripts de juego/verificar/.
-juego/verificar/trazas.json
-juego/verificar/sonda.json
-
-# Auxiliares de LaTeX
-informe/*.aux
-informe/*.log
-informe/*.out
-informe/*.toc
-informe/*.fls
-informe/*.fdb_latexmk
-informe/*.synctex.gz
+# Sólo se versionan los pesos finales del agente.
+gold_dice_rl/artifacts/*
+!gold_dice_rl/artifacts/gold_dice_agent.pkl
+gold_dice_rl/sol_dp
+gold_dice_rl/sol_dp.exe
+juego/verificar/
 
 # --- trabajo de terceros -----------------------------------------------------
 # La entrega de otro grupo, usada solo como referencia local. No se publica.
 tmp/
 Informe_TP1_GoldDiceRL.docx
 TP1_GoldDiceRL.zip
-
-# --- se fuerzan a entrar ------------------------------------------------------
-!gold_dice_rl/artifacts/gold_dice_agent.pkl
-!gold_dice_rl/artifacts/classic_*.pkl
-
-informe/_*.png
