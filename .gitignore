@@ -1,7 +1,4 @@
 # --- dependencias y builds --------------------------------------------------
-node_modules/
-web/.next/
-web/next-env.d.ts
 __pycache__/
 *.pyc
 .DS_Store
@@ -18,9 +15,9 @@ gold_dice_rl/artifacts/smoke*.pkl
 gold_dice_rl/artifacts/*_curve.npy
 gold_dice_rl/artifacts/log_*.txt
 
-# Trazas de verificación: las regeneran gen_trace.py y gen_policy_probe.py.
-web/scripts/traces.json
-web/scripts/policy_probe.json
+# Datos de prueba: los regeneran los scripts de juego/verificar/.
+juego/verificar/trazas.json
+juego/verificar/sonda.json
 
 # Auxiliares de LaTeX
 informe/*.aux
@@ -42,7 +39,3 @@ TP1_GoldDiceRL.zip
 !gold_dice_rl/artifacts/classic_*.pkl
 
 informe/_*.png
-
-# Boilerplate que genera Next.js para agentes, no es parte del trabajo
-web/AGENTS.md
-web/CLAUDE.md

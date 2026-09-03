@@ -101,7 +101,7 @@ def make_trace(seed: int) -> dict:
 
 if __name__ == "__main__":
     traces = [make_trace(s) for s in range(N_TRACES)]
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "traces.json")
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trazas.json")
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(traces, fh, separators=(",", ":"))
     total = sum(len(t["states"]) for t in traces)

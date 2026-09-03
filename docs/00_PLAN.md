@@ -421,7 +421,10 @@ TP_RL_2026/
 - [x] Motor verificado contra `env.py`: 60 partidas, 14.460 comparaciones, 0 discrepancias.
 - [x] Políticas verificadas contra los agentes de Python en 6.600 estados: Campeón y Novato
       6600/6600, Aprendiz 6595/6600 (las 5 son empates por debajo de 0.016 puntos).
-- [ ] Deploy en Vercel — queda del lado del usuario. `web/README.md` tiene los pasos.
+- [x] Reescrito en HTML/CSS/JS sueltos: se abre con doble clic, sin instalar nada.
+- [x] La jugada buena **no** se marca antes de elegir; la pista existe pero descuenta.
+- [x] Interfaz verificada sin navegador, jugando dos partidas con un DOM simulado.
+- [ ] Publicarlo — queda del lado del usuario. `juego/LEEME.md` tiene los pasos.
 
 ### Lo que quedó afuera, y por qué
 

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gold Dice — jugá contra los agentes</title>
+<meta name="description" content="Gold Dice RL: jugá contra agentes entrenados con aprendizaje por refuerzos y descubrí, contra la solución exacta del juego, cuánto de tu resultado fue decisión y cuánto fue suerte.">
+<style>
+/* ---------------------------------------------------------------------------
+   El juego es contabilidad con dados: cada turno es una decisión sobre plata.
+   La página se compromete con eso. Tinta casi negra, un solo acento cálido,
+   y los números enormes y alineados, porque los números SON el contenido.
+   Nada de cajas adentro de cajas: el aire y una línea fina alcanzan.
+--------------------------------------------------------------------------- */
+:root{
+  --tinta:#0a0b0d; --papel:#f4efe6; --oro:#e8b04b; --oro-tenue:#6b5220;
+  --gris:#8b8f99; --debil:#585d68; --linea:#1c1f26; --linea-viva:#2a2f39;
+  --tormenta:#e0603a; --bien:#4bbd88;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--tinta); color:var(--papel); min-height:100vh;
+  font:15px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(900px 420px at 50% -10%,rgba(232,176,75,.06),transparent 65%);
+  background-attachment:fixed;
+}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.oro{color:var(--oro)}
+.envoltorio{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+
+/* --------------------------------------------------------------- cabecera */
+header.tope{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+.marca{font-size:15px;font-weight:700;letter-spacing:.26em;text-transform:uppercase}
+.marca span{color:var(--oro)}
+.bajada{color:var(--gris);font-size:12.5px;margin-top:3px;max-width:52ch}
+.refs{display:flex;gap:26px}
+.ref{text-align:right}
+.ref b{display:block;font:700 19px/1 var(--mono);font-variant-numeric:tabular-nums}
+.ref small{color:var(--debil);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700}
+
+/* ------------------------------------------------------------- tira turnos */
+.tira{display:grid;grid-template-columns:repeat(30,1fr);gap:2px;margin-bottom:26px}
+.tira i{height:3px;background:var(--linea-viva);border-radius:2px;transition:background .2s}
+.tira i.ya{background:var(--oro-tenue)}
+.tira i.hoy{background:var(--oro);box-shadow:0 0 10px rgba(232,176,75,.5)}
+.tira i.rayo{background:var(--tormenta)}
+
+/* -------------------------------------------------------------- estructura */
+.tablero{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:44px;align-items:start}
+@media(max-width:880px){.tablero{grid-template-columns:1fr;gap:30px}}
+
+.cifras{display:flex;gap:48px;align-items:flex-end;margin-bottom:26px;flex-wrap:wrap}
+.cifra small{display:block;color:var(--debil);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;margin-bottom:3px}
+.cifra b{font:700 46px/.92 var(--mono);font-variant-numeric:tabular-nums;display:block}
+.cifra.chica b{font-size:22px}
+.cifra em{font-style:normal;color:var(--gris);font-size:11.5px;display:block;margin-top:5px}
+
+/* ------------------------------------------------------------------ dados */
+.dados{display:flex;gap:9px;flex-wrap:wrap;min-height:52px;align-items:center;margin-bottom:8px}
+.dado{
+  width:46px;height:46px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(155deg,#fbf6ea,#ddd2b8);color:#14161a;
+  font:800 19px/1 var(--mono);box-shadow:0 3px 0 #9c9070,0 6px 14px rgba(0,0,0,.4);
+  animation:cae .28s cubic-bezier(.2,.9,.3,1.3) both;
+}
+.dado.top{background:linear-gradient(155deg,#ffd98d,var(--oro));box-shadow:0 3px 0 var(--oro-tenue),0 0 18px rgba(232,176,75,.3)}
+@keyframes cae{from{transform:translateY(-9px) rotate(-7deg);opacity:0}to{transform:none;opacity:1}}
+.pieDados{color:var(--debil);font-size:11.5px;margin-bottom:24px}
+
+/* --------------------------------------------------------------- acciones */
+.acciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px}
+.jugada{
+  text-align:left;background:transparent;border:1px solid var(--linea-viva);border-radius:4px;
+  padding:12px 13px;color:var(--papel);font:inherit;cursor:pointer;display:grid;gap:3px;
+  transition:border-color .14s,background .14s,transform .06s;
+}
+.jugada:hover:not(:disabled){border-color:var(--oro-tenue);background:rgba(232,176,75,.05)}
+.jugada:active:not(:disabled){transform:translateY(1px)}
+.jugada:disabled{opacity:.26;cursor:not-allowed}
+.jugada b{font-size:13.5px;font-weight:700}
+.jugada small{color:var(--gris);font-size:11px;line-height:1.4}
+.jugada.pista{border-color:var(--oro);box-shadow:0 0 0 1px rgba(232,176,75,.18)}
+
+/* --------------------------------------------------------------- controles */
+.btn{font:inherit;font-weight:700;font-size:12.5px;padding:9px 17px;border-radius:4px;
+  border:1px solid var(--linea-viva);background:transparent;color:var(--papel);cursor:pointer;transition:.14s}
+.btn:hover:not(:disabled){border-color:var(--oro-tenue)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.lleno{background:var(--oro);border-color:var(--oro);color:#14161a}
+.btn.lleno:hover{background:#f5c163}
+.btn.mini{padding:5px 10px;font-size:11px}
+.ayuda{width:21px;height:21px;border-radius:50%;border:1px solid var(--linea-viva);background:transparent;
+  color:var(--gris);font:800 11px/1 inherit;cursor:pointer;padding:0}
+.ayuda:hover{color:var(--oro);border-color:var(--oro-tenue)}
+
+input[type=text]{font:inherit;background:#0f1116;border:1px solid var(--linea-viva);color:var(--papel);
+  border-radius:4px;padding:10px 12px;width:100%}
+input[type=text]:focus{outline:0;border-color:var(--oro-tenue)}
+input[type=range]{width:100%;accent-color:var(--oro)}
+
+/* ---------------------------------------------------------------- rivales */
+.rival{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 0;border-bottom:1px solid var(--linea)}
+.rival:last-child{border-bottom:0}
+.rival b{font-size:13px}
+.rival small{color:var(--debil);font-size:10.5px}
+.rival .p{grid-row:1/3;grid-column:2;align-self:center;font:700 21px/1 var(--mono);font-variant-numeric:tabular-nums}
+.rival .mov{grid-column:1/-1;color:var(--gris);font-size:11px;display:flex;justify-content:space-between;
+  align-items:center;gap:8px;margin-top:6px}
+.rival.vos b{color:var(--oro)}
+.rival.puntero .p{color:var(--oro)}
+
+.rotulo{color:var(--debil);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;
+  padding-bottom:9px;border-bottom:1px solid var(--linea-viva);margin-bottom:4px}
+.nota{color:var(--gris);font-size:12px;line-height:1.6}
+.nota b{color:var(--papel)}
+
+.chip{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  padding:3px 8px;border-radius:99px;border:1px solid var(--linea-viva);color:var(--gris)}
+.chip.mal{border-color:rgba(224,96,58,.45);color:var(--tormenta)}
+.chip.bien{border-color:rgba(75,189,136,.45);color:var(--bien)}
+.chip.au{border-color:var(--oro-tenue);color:var(--oro)}
+
+.veredicto{font-size:12.5px;line-height:1.6;padding:11px 0 0;border-top:1px solid var(--linea);margin-top:14px}
+
+/* ------------------------------------------------------------------ modal */
+.fondo{position:fixed;inset:0;background:rgba(4,5,7,.82);display:grid;place-items:center;padding:22px;z-index:20;
+  animation:aparece .16s ease-out}
+@keyframes aparece{from{opacity:0}to{opacity:1}}
+.ficha{background:#101318;border:1px solid var(--linea-viva);border-radius:6px;max-width:520px;width:100%;
+  max-height:82vh;overflow:auto;padding:22px 24px}
+.ficha h3{color:var(--oro);font-size:17px;margin-bottom:12px;line-height:1.35}
+.ficha p{color:var(--gris);font-size:13px;line-height:1.65;margin-bottom:10px}
+.ficha p:last-of-type{margin-bottom:0}
+.ficha .alt{border-top:1px solid var(--linea);padding-top:11px;margin-top:13px;color:var(--debil)}
+
+/* ------------------------------------------------------------------ final */
+.balance{display:flex;gap:44px;flex-wrap:wrap;margin:6px 0 22px}
+.barras{display:grid;grid-template-columns:repeat(30,1fr);gap:2px;align-items:end;height:54px;margin-top:8px}
+.barras i{background:var(--linea-viva);border-radius:1px;min-height:2px}
+.barras i.duele{background:var(--tormenta)}
+table.tabla{width:100%;border-collapse:collapse;font-size:12.5px}
+table.tabla th{text-align:left;color:var(--debil);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  font-weight:700;padding:0 8px 8px;border-bottom:1px solid var(--linea-viva)}
+table.tabla td{padding:7px 8px;border-bottom:1px solid var(--linea)}
+table.tabla tr:last-child td{border-bottom:0}
+.der{text-align:right}
+
+.pestanas{display:flex;gap:4px}
+.pest{font:inherit;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 10px;border:1px solid var(--linea-viva);background:transparent;color:var(--gris);cursor:pointer;border-radius:4px}
+.pest[aria-selected=true]{color:var(--oro);border-color:var(--oro-tenue);background:rgba(232,176,75,.07)}
+
+.apilado{display:grid;gap:26px}
+.fila{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.entre{justify-content:space-between}
+footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--linea);color:var(--debil);font-size:11.5px;line-height:1.65}
+.oculto{display:none!important}
+.sacude{animation:sacude .4s}
+@keyframes sacude{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+</style>
+</head>
+<body>
+<div class="envoltorio">
+
+  <header class="tope">
+    <div>
+      <div class="marca">Gold <span>Dice</span></div>
+      <p class="bajada">Treinta turnos para convertir dados en puntos. Al final te decimos cuánto de tu
+        resultado fueron tus decisiones y cuánto fue suerte — comparándote contra el juego resuelto exacto.</p>
+    </div>
+    <div class="refs">
+      <div class="ref"><b class="num oro">644</b><small>juego perfecto</small></div>
+      <div class="ref"><b class="num">527</b><small>mejor agente</small></div>
+      <div class="ref"><b class="num">343</b><small>baseline</small></div>
+    </div>
+  </header>
+
+  <!-- ============================================================ INICIO -->
+  <section id="inicio">
+    <div class="tablero">
+      <div class="apilado">
+        <div>
+          <div class="rotulo">Cómo se juega</div>
+          <p class="nota" style="margin-top:14px">
+            Cada turno tirás tus dados y el oro se suma. Con ese oro podés hacer <b>una sola cosa</b>:
+            convertirlo en puntos, comprar un dado, mejorar todos los dados, comprar un escudo,
+            o pagar 4 para volver a cobrar tu mejor dado el turno siguiente.
+          </p>
+          <p class="nota" style="margin-top:11px">
+            Después de tu jugada, con probabilidad <b>15 %</b> cae una tormenta y te parte el oro al medio.
+            Los puntos no se tocan: ya están guardados. Un escudo bloquea una tormenta.
+          </p>
+          <p class="nota" style="margin-top:11px">
+            Y el detalle que decide todo: <b>en el turno 30 no hay tirada después</b>, así que el oro
+            que no hayas convertido se evapora.
+          </p>
+          <p class="nota" style="margin-top:11px;color:var(--debil)">
+            No te vamos a marcar la jugada buena antes de que elijas — eso arruina el juego. Te la
+            mostramos después, con lo que costó la diferencia.
+          </p>
+        </div>
+
+        <div>
+          <div class="rotulo">Tu nombre</div>
+          <div style="margin-top:14px;max-width:320px">
+            <input type="text" id="nombre" maxlength="20" placeholder="Para la tabla. Sin cuenta, sin mail." autocomplete="off">
+          </div>
+        </div>
+
+        <div>
+          <div class="rotulo">Contra quién</div>
+          <div class="pestanas" style="margin-top:14px" id="modos"></div>
+          <p class="nota" id="modoNota" style="margin-top:12px"></p>
+        </div>
+
+        <div class="fila">
+          <button class="btn lleno" id="empezar">Jugar 30 turnos</button>
+          <span class="nota" id="estadoCarga">Cargando los agentes…</span>
+        </div>
+      </div>
+
+      <div class="apilado">
+        <div>
+          <div class="rotulo">Los rivales</div>
+          <div id="listaRivales" style="margin-top:6px"></div>
+        </div>
+        <div id="tablaInicio"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ PARTIDA -->
+  <section id="partida" class="oculto">
+    <div class="tira" id="tira"></div>
+    <div class="tablero">
+      <div>
+        <div class="cifras">
+          <div class="cifra"><small>Puntos</small><b class="num" id="cPuntos">0</b></div>
+          <div class="cifra" id="boxOro"><small>Oro</small><b class="num oro" id="cOro">0</b></div>
+          <div class="cifra chica"><small>Motor</small><b class="num" id="cMotor">1d +0</b><em id="cRenta"></em></div>
+          <div class="cifra chica" id="boxEscudos"><small>Escudos</small><b class="num" id="cEscudos">0</b></div>
+        </div>
+
+        <div class="dados" id="dados"></div>
+        <div class="pieDados" id="pieDados"></div>
+
+        <div id="zonaJugadas">
+          <div class="fila entre" style="margin-bottom:11px">
+            <div class="rotulo" style="border:0;padding:0;margin:0">Tu jugada — turno <span id="cTurno" class="num">1</span> de 30</div>
+            <button class="btn mini" id="btnPista">Pedir pista (−1,5)</button>
+          </div>
+          <div class="acciones" id="acciones"></div>
+          <div class="veredicto oculto" id="veredicto"></div>
+        </div>
+
+        <div id="zonaPuntuar" class="oculto">
+          <div class="fila entre" style="margin-bottom:9px">
+            <span class="nota">¿Cuánto convertís? Lo que dejes queda expuesto a la tormenta.</span>
+            <b class="num oro" style="font-size:26px" id="montoTexto">0</b>
+          </div>
+          <input type="range" id="monto" min="0" value="0">
+          <div class="fila entre" style="margin-top:11px">
+            <div class="fila" style="gap:6px">
+              <button class="btn mini" data-parte="1">todo</button>
+              <button class="btn mini" data-parte="0.5">mitad</button>
+              <button class="btn mini" data-parte="0">nada</button>
+            </div>
+            <div class="fila" style="gap:6px">
+              <button class="btn mini" id="cancelarPuntuar">volver</button>
+              <button class="btn lleno" id="confirmarPuntuar">convertir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="apilado" id="ladoPartida"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================== FINAL -->
+  <section id="final" class="oculto">
+    <div class="tablero">
+      <div class="apilado" id="ladoFinal"></div>
+      <div class="apilado" id="ladoFinalDer"></div>
+    </div>
+  </section>
+
+  <footer>
+    Trabajo Práctico 1 — Aprendizaje por Refuerzos, Inteligencia Artificial y Neurociencias (UTDT).
+    Los agentes corren enteros en tu navegador, sin llamar a ningún servidor. El análisis usa la
+    solución exacta del juego, calculada por programación dinámica: <span class="num">642</span> puntos
+    es lo máximo que se puede esperar jugando perfecto.
+  </footer>
+</div>
+
+<div id="modal" class="fondo oculto"></div>
+
+<script src="data.js"></script>
+<script src="motor.js"></script>
+<script src="agentes.js"></script>
+<script src="explicar.js"></script>
+<script>
+(function(){
+"use strict";
+var M = GD.motor, A = GD.agentes;
+var $ = function(id){ return document.getElementById(id); };
+var mundo = null, modo = "tres", pistasUsadas = 0;
+var partida = null, rivales = [], registro = [], semilla = 0;
+var ultimoVeredicto = null;
+
+var MODOS = {
+  solo:{ etiqueta:"Solo", nota:"Vos contra el juego. Al final ves cuánto te costó cada decisión." },
+  uno:{ etiqueta:"Contra el Campeón", nota:"El mejor agente que entrenamos juega a la par tuya, con los mismos dados." },
+  tres:{ etiqueta:"Contra los tres", nota:"Los tres agentes juegan al mismo tiempo. Todos ven la misma tirada y la misma tormenta, así que la diferencia son las decisiones." }
+};
+
+// ------------------------------------------------------------------ tabla
+// Guardar siempre, incluso sin nombre: una partida que no queda registrada
+// es una partida que el jugador siente que perdió.
+var CLAVE = "goldDice.tabla.v1";
+function leerTabla(){ try { return JSON.parse(localStorage.getItem(CLAVE) || "[]"); } catch(e){ return []; } }
+function guardarPartida(fila){
+  try {
+    var t = leerTabla(); t.unshift(fila);
+    localStorage.setItem(CLAVE, JSON.stringify(t.slice(0,200)));
+  } catch(e){ /* modo privado o cuota llena: el juego sigue igual */ }
+}
+function recordarNombre(n){ try{ localStorage.setItem("goldDice.nombre", n); }catch(e){} }
+function nombreGuardado(){ try{ return localStorage.getItem("goldDice.nombre") || ""; }catch(e){ return ""; } }
+
+function pintarTabla(destino, orden){
+  orden = orden || "nota";
+  var filas = leerTabla().slice().sort(function(a,b){
+    return orden === "nota" ? b.nota - a.nota : b.puntaje - a.puntaje;
+  }).slice(0,10);
+
+  var html = '<div class="fila entre" style="border-bottom:1px solid var(--linea-viva);padding-bottom:9px;margin-bottom:4px">' +
+    '<span class="rotulo" style="border:0;padding:0;margin:0">Mejores partidas</span>' +
+    '<span class="pestanas">' +
+      '<button class="pest" data-orden="nota" aria-selected="'+(orden==="nota")+'">decisiones</button>' +
+      '<button class="pest" data-orden="puntaje" aria-selected="'+(orden==="puntaje")+'">puntaje</button>' +
+    '</span></div>';
+
+  if(!filas.length){
+    html += '<p class="nota" style="margin-top:12px">Todavía no jugaste ninguna. La primera queda acá.</p>';
+  } else {
+    html += '<table class="tabla" style="margin-top:8px"><thead><tr><th>Quién</th>' +
+      '<th class="der">Decisiones</th><th class="der">Puntos</th><th class="der">Suerte</th></tr></thead><tbody>';
+    filas.forEach(function(f){
+      html += '<tr><td>'+escapar(f.nombre)+'</td>' +
+        '<td class="der num" style="color:'+(orden==="nota"?"var(--oro)":"inherit")+'">'+f.nota.toFixed(1)+'%</td>' +
+        '<td class="der num">'+f.puntaje+'</td>' +
+        '<td class="der num" style="color:'+(f.suerte>=0?"var(--bien)":"var(--tormenta)")+'">' +
+        (f.suerte>=0?"+":"")+Math.round(f.suerte)+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '<p class="nota" style="margin-top:12px;color:var(--debil)">El ranking por <b>decisiones</b> no se ' +
+    'puede mejorar volviendo a tirar: mide qué porcentaje del óptimo capturaron tus jugadas, no cuánta suerte tuviste.</p>';
+
+  destino.innerHTML = html;
+  Array.prototype.forEach.call(destino.querySelectorAll(".pest"), function(b){
+    b.onclick = function(){ pintarTabla(destino, b.dataset.orden); };
+  });
+}
+
+function escapar(s){ return String(s).replace(/[<>&"]/g, function(c){
+  return ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"})[c]; }); }
+
+// ------------------------------------------------------------------ inicio
+function armarInicio(){
+  var modos = $("modos");
+  modos.innerHTML = "";
+  Object.keys(MODOS).forEach(function(k){
+    var b = document.createElement("button");
+    b.className = "pest"; b.textContent = MODOS[k].etiqueta;
+    b.setAttribute("aria-selected", String(k === modo));
+    b.onclick = function(){ modo = k; armarInicio(); };
+    modos.appendChild(b);
+  });
+  $("modoNota").textContent = MODOS[modo].nota;
+
+  var lista = $("listaRivales");
+  lista.innerHTML = mundo.agentes.map(function(a){
+    return '<div class="rival"><b>'+a.label+'</b><small>'+a.algo+'</small>' +
+      '<span class="p num">'+Math.round(a.mean)+'</span></div>';
+  }).join("") +
+  '<div class="rival"><b class="oro">Juego perfecto</b><small>no aprende: es el juego resuelto exacto</small>' +
+  '<span class="p num oro">644</span></div>';
+
+  pintarTabla($("tablaInicio"));
+}
+
+// ----------------------------------------------------------------- partida
+function empezar(){
+  semilla = (Math.random() * 0xffffff) >>> 0;
+  pistasUsadas = 0;
+  registro = [];
+  ultimoVeredicto = null;
+  partida = new M.Partida(M.azar(semilla));
+  var elegidos = modo === "solo" ? [] : (modo === "uno" ? [mundo.agentes[0]] : mundo.agentes);
+  rivales = elegidos.map(function(a){
+    return { agente:a, partida:new M.Partida(M.azar(semilla)), ultima:"", explicacion:null };
+  });
+  $("inicio").classList.add("oculto");
+  $("final").classList.add("oculto");
+  $("partida").classList.remove("oculto");
+  pintar();
+}
+
+function pintar(){
+  var s = partida.situacion();
+  $("cPuntos").textContent = partida.puntos;
+  $("cOro").textContent = partida.oro;
+  $("cMotor").textContent = partida.dados + "d +" + partida.bonus;
+  $("cRenta").textContent = (partida.dados * (3.5 + partida.bonus)).toFixed(1) + " oro por turno";
+  $("cEscudos").textContent = partida.escudos;
+  $("boxEscudos").style.opacity = partida.escudos > 0 ? "1" : ".4";
+  $("cTurno").textContent = Math.min(partida.turno, 30);
+
+  // tira de turnos
+  var tira = $("tira"); tira.innerHTML = "";
+  for(var t=1; t<=30; t++){
+    var i = document.createElement("i");
+    var r = partida.historia[t-1];
+    if(r && r.tormenta && !r.bloqueada) i.className = "rayo";
+    else if(t === partida.turno) i.className = "hoy";
+    else if(t < partida.turno) i.className = "ya";
+    i.title = "Turno " + t;
+    tira.appendChild(i);
+  }
+
+  // dados
+  var caja = $("dados"); caja.innerHTML = "";
+  var mejor = Math.max.apply(null, partida.tiradaConBonus.concat([0]));
+  var yaMarque = false;
+  partida.tiradaConBonus.forEach(function(v){
+    var d = document.createElement("div");
+    d.className = "dado num" + (v === mejor && !yaMarque ? " top" : "");
+    if(v === mejor) yaMarque = true;
+    d.textContent = v;
+    caja.appendChild(d);
+  });
+  var ult = partida.historia[partida.historia.length-1];
+  var pie = "Suma " + partida.sumaTirada + (partida.bonus ? " (cada dado lleva +" + partida.bonus + ")" : "");
+  if(ult && ult.tormenta) pie += ult.bloqueada ? " · el escudo frenó la tormenta" : " · tormenta: perdiste " + ult.oroPerdido + " de oro";
+  $("pieDados").textContent = pie;
+  // La sacudida se aplica al bloque del oro, que es lo que la tormenta toca.
+  if(ult && ult.tormenta && !ult.bloqueada) $("boxOro").classList.add("sacude");
+  else $("boxOro").classList.remove("sacude");
+
+  pintarAcciones(s);
+  pintarVeredicto();
+  pintarLado();
+}
+
+var TEXTOS = {};
+TEXTOS[M.PUNTUAR] = function(s){ return s.oro > 0 ? "convertís oro en puntos, a salvo de la tormenta" : "no tenés oro para convertir"; };
+TEXTOS[M.GUARDAR] = function(s){ return "pagás " + M.STORE_COST + " y volvés a cobrar " + s.mejorDado + " el turno que viene"; };
+TEXTOS[M.COMPRAR_DADO] = function(s){ return "cuesta " + M.costoDado(s.dados) + " · pasás a " + (s.dados+1) + " dados"; };
+TEXTOS[M.MEJORAR] = function(s){ return "cuesta " + M.costoMejora(s.bonus) + " · +1 a todos los dados, también a los futuros"; };
+TEXTOS[M.ESCUDO] = function(s){ return "cuesta " + M.SHIELD_COST + " · frena una tormenta"; };
+TEXTOS[M.PASAR] = function(){ return "no hacés nada y guardás el oro"; };
+
+var ORDEN = [M.PUNTUAR, M.GUARDAR, M.COMPRAR_DADO, M.MEJORAR, M.ESCUDO, M.PASAR];
+
+function pintarAcciones(s){
+  var legales = partida.jugadasLegales();
+  var sugerida = ultimoVeredicto && ultimoVeredicto.pista ? ultimoVeredicto.pista : null;
+  var caja = $("acciones"); caja.innerHTML = "";
+  ORDEN.forEach(function(a){
+    var b = document.createElement("button");
+    b.className = "jugada" + (sugerida === a ? " pista" : "");
+    b.disabled = legales.indexOf(a) < 0;
+    b.innerHTML = "<b>" + M.NOMBRES[a] + "</b><small>" + TEXTOS[a](s) + "</small>";
+    b.onclick = function(){ elegir(a); };
+    caja.appendChild(b);
+  });
+  $("btnPista").disabled = !!sugerida;
+  $("btnPista").textContent = sugerida ? "pista usada" : "Pedir pista (−1,5)";
+}
+
+function pintarVeredicto(){
+  var v = $("veredicto");
+  if(!ultimoVeredicto || !ultimoVeredicto.texto){ v.classList.add("oculto"); return; }
+  v.classList.remove("oculto");
+  v.innerHTML = ultimoVeredicto.texto;
+}
+
+function elegir(accion){
+  if(accion === M.PUNTUAR){
+    var r = $("monto");
+    r.max = partida.oro; r.value = partida.oro;
+    $("montoTexto").textContent = partida.oro;
+    $("zonaJugadas").classList.add("oculto");
+    $("zonaPuntuar").classList.remove("oculto");
+    return;
+  }
+  jugar(accion, null);
+}
+
+function jugar(accion, cuanto){
+  var s = partida.situacion();
+  registro.push(s);
+
+  // Recién ahora se revela qué hubiera hecho el Campeón. Antes de elegir no:
+  // marcar la jugada buena convierte el juego en apretar el botón resaltado.
+  var campeon = mundo.agentes[0];
+  var rank = campeon.ranking(s);
+  var tuya = A.etiqueta(accion, cuanto);
+  var suya = rank[0];
+  var texto;
+  if(suya.accion === accion && (accion !== M.PUNTUAR || suya.cuanto === cuanto)){
+    texto = '<span class="chip bien">igual</span> &nbsp;Jugaste lo mismo que el Campeón.';
+  } else {
+    var mia = null;
+    for(var i=0;i<rank.length;i++) if(rank[i].accion === accion) mia = rank[i];
+    var brecha = (mia && isFinite(mia.valor) && isFinite(suya.valor)) ? suya.valor - mia.valor : null;
+    if(brecha !== null && brecha < 1){
+      texto = '<span class="chip">empate</span> &nbsp;El Campeón prefería <b>' + suya.texto +
+        '</b>, pero por menos de un punto.';
+    } else {
+      texto = '<span class="chip au">mirá</span> &nbsp;El Campeón jugaba <b>' + suya.texto + '</b>' +
+        (brecha !== null ? ', que valúa ' + brecha.toFixed(1) + ' puntos por encima de lo tuyo' : '') + '.';
+    }
+  }
+  ultimoVeredicto = { texto: texto, pista: null };
+
+  partida.jugar(accion, cuanto);
+
+  rivales.forEach(function(r){
+    if(r.partida.terminada) return;
+    var rs = r.partida.situacion();
+    var mejor = r.agente.ranking(rs)[0];
+    r.ultima = "turno " + rs.turno + ": " + mejor.texto;
+    r.explicacion = GD.explicar(rs, r.agente.ranking(rs));
+    r.partida.jugar(mejor.accion, mejor.cuanto);
+  });
+
+  $("zonaPuntuar").classList.add("oculto");
+  $("zonaJugadas").classList.remove("oculto");
+
+  if(partida.terminada) terminar();
+  else pintar();
+}
+
+function pedirPista(){
+  var s = partida.situacion();
+  var mejor = mundo.agentes[0].ranking(s)[0];
+  pistasUsadas += 1;
+  ultimoVeredicto = ultimoVeredicto || { texto:null };
+  ultimoVeredicto.pista = mejor.accion;
+  pintarAcciones(s);
+}
+
+function pintarLado(){
+  var lado = $("ladoPartida");
+  var html = "";
+
+  if(rivales.length){
+    var puntero = Math.max.apply(null, [partida.puntos].concat(rivales.map(function(r){ return r.partida.puntos; })));
+    html += '<div><div class="rotulo">La mesa</div>';
+    html += '<div class="rival vos' + (partida.puntos === puntero ? " puntero" : "") + '"><b>Vos</b><small>humano</small>' +
+      '<span class="p num">' + partida.puntos + '</span></div>';
+    rivales.forEach(function(r, i){
+      html += '<div class="rival' + (r.partida.puntos === puntero ? " puntero" : "") + '">' +
+        '<b>' + r.agente.label + '</b><small>' + r.agente.algo + '</small>' +
+        '<span class="p num">' + r.partida.puntos + '</span>' +
+        (r.ultima ? '<span class="mov"><span>' + r.ultima + '</span>' +
+          '<button class="ayuda" data-rival="' + i + '" title="¿Por qué?">?</button></span>' : '') +
+        '</div>';
+    });
+    html += '<p class="nota" style="margin-top:13px">Todos ven la <b>misma tirada</b> y la <b>misma tormenta</b>. ' +
+      'La diferencia de puntaje no tiene suerte adentro: son las decisiones.</p></div>';
+  }
+
+  html += '<div><div class="rotulo">Consultar</div>' +
+    '<p class="nota" style="margin:13px 0">Podés preguntarle al Campeón qué haría en tu lugar, pero te ' +
+    'descuenta de la nota de decisiones. La ayuda existe; gratis no.</p>' +
+    '<button class="btn" id="btnConsultar">¿Qué harías vos acá?</button>' +
+    (pistasUsadas ? '<p class="nota" style="margin-top:10px;color:var(--debil)">Pistas usadas: ' + pistasUsadas + '</p>' : '') +
+    '</div>';
+
+  lado.innerHTML = html;
+
+  Array.prototype.forEach.call(lado.querySelectorAll(".ayuda"), function(b){
+    b.onclick = function(){
+      var r = rivales[+b.dataset.rival];
+      if(r.explicacion) abrirFicha(r.agente.label + " — " + r.ultima, r.explicacion);
+    };
+  });
+  var c = $("btnConsultar");
+  if(c) c.onclick = function(){
+    var s = partida.situacion();
+    pistasUsadas += 1;
+    abrirFicha("El Campeón en tu lugar — turno " + s.turno, GD.explicar(s, mundo.agentes[0].ranking(s)));
+    pintarLado();
+  };
+}
+
+function abrirFicha(titulo, e){
+  var m = $("modal");
+  m.innerHTML = '<div class="ficha"><h3>' + escapar(titulo) + '</h3>' +
+    '<p style="color:var(--oro);font-weight:700;font-size:14.5px">' + escapar(e.titulo) + '</p>' +
+    e.razones.map(function(r){ return '<p>' + escapar(r) + '</p>'; }).join("") +
+    (e.alternativa ? '<p class="alt">' + escapar(e.alternativa) + '</p>' : '') +
+    '<div style="margin-top:16px"><button class="btn mini" id="cerrarFicha">cerrar</button></div></div>';
+  m.classList.remove("oculto");
+  m.onclick = function(ev){ if(ev.target === m) cerrarFicha(); };
+  $("cerrarFicha").onclick = cerrarFicha;
+}
+function cerrarFicha(){ $("modal").classList.add("oculto"); }
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarFicha(); });
+
+// ------------------------------------------------------------------- final
+function terminar(){
+  var an = mundo.oraculo.analizar(registro, partida.historia, pistasUsadas);
+  var nombre = ($("nombre").value || "").trim() || nombreGuardado() || "Anónimo";
+  if(nombre !== "Anónimo") recordarNombre(nombre);
+  guardarPartida({ nombre:nombre, puntaje:an.puntaje, nota:an.nota, suerte:an.suerte,
+                   semilla:semilla, cuando:Date.now() });
+
+  $("partida").classList.add("oculto");
+  $("final").classList.remove("oculto");
+
+  var maxP = Math.max.apply(null, an.turnos.map(function(t){ return t.perdido; }).concat([1]));
+  var buenaSuerte = an.suerte >= 0;
+
+  $("ladoFinal").innerHTML =
+    '<div><div class="rotulo">Terminó la partida</div>' +
+      '<div class="balance" style="margin-top:18px">' +
+        '<div class="cifra"><small>Tu puntaje</small><b class="num">' + an.puntaje + '</b></div>' +
+        '<div class="cifra"><small>Calidad de decisiones</small><b class="num oro">' + an.nota.toFixed(1) + '%</b>' +
+          '<em>' + (an.pistas ? an.pistas + ' pista(s): −' + (an.pistas*1.5).toFixed(1) + '</em>' : 'sin pistas</em>') + '</div>' +
+        '<div class="cifra"><small>Suerte</small><b class="num" style="color:' +
+          (buenaSuerte ? 'var(--bien)' : 'var(--tormenta)') + '">' + (buenaSuerte?'+':'') + Math.round(an.suerte) + '</b>' +
+          '<em>' + (buenaSuerte ? 'el azar te ayudó' : 'el azar te castigó') + '</em></div>' +
+      '</div>' +
+      '<p class="nota">La partida que jugaste valía <b class="num">' + Math.round(an.calidad) + '</b> puntos esperados: ' +
+        'el máximo es <span class="num">' + Math.round(an.optimo) + '</span> y tus decisiones regalaron ' +
+        '<span class="num">' + Math.round(an.perdido) + '</span>. Sacaste <b class="num">' + an.puntaje + '</b>, ' +
+        'así que el azar puso <b class="num">' + (buenaSuerte?'+':'') + Math.round(an.suerte) + '</b>. ' +
+        'Las dos cosas suman tu resultado, exacto.</p>' +
+      '<div style="margin-top:20px"><div class="rotulo" style="border:0;padding:0">Puntos perdidos por turno</div>' +
+      '<div class="barras">' + an.turnos.map(function(t){
+          return '<i class="' + (t.perdido > 0.5 ? 'duele' : '') + '" style="height:' +
+            Math.max(3, (t.perdido/maxP)*100) + '%" title="Turno ' + t.turno + ': ' + t.perdido.toFixed(1) + '"></i>';
+        }).join("") + '</div></div>' +
+      '<div class="fila" style="margin-top:24px">' +
+        '<button class="btn lleno" id="otra">Jugar otra</button>' +
+        '<button class="btn" id="volver">cambiar modo</button>' +
+      '</div>' +
+    '</div>';
+
+  var peores = an.peores.filter(function(t){ return t.perdido > 0.05; });
+  $("ladoFinalDer").innerHTML =
+    '<div><div class="rotulo">Tus jugadas más caras</div>' +
+      (peores.length ?
+        '<table class="tabla" style="margin-top:10px"><thead><tr><th class="der">T</th><th>Jugaste</th>' +
+        '<th>Convenía</th><th class="der">Costó</th></tr></thead><tbody>' +
+        peores.map(function(t){
+          return '<tr><td class="der num">' + t.turno + '</td><td>' + t.jugaste + '</td>' +
+            '<td class="oro">' + t.convenia + '</td><td class="der num">−' + t.perdido.toFixed(1) + '</td></tr>';
+        }).join("") + '</tbody></table>'
+        : '<p class="nota" style="margin-top:12px">Ninguna jugada perdió nada medible. Partida impecable.</p>') +
+    '</div><div id="tablaFinal"></div>';
+
+  pintarTabla($("tablaFinal"));
+  $("otra").onclick = empezar;
+  $("volver").onclick = function(){
+    $("final").classList.add("oculto");
+    $("inicio").classList.remove("oculto");
+    armarInicio();
+  };
+}
+
+// ------------------------------------------------------------------ arranque
+$("monto").oninput = function(){ $("montoTexto").textContent = this.value; };
+Array.prototype.forEach.call(document.querySelectorAll("[data-parte]"), function(b){
+  b.onclick = function(){
+    var v = Math.floor(partida.oro * parseFloat(b.dataset.parte));
+    $("monto").value = v; $("montoTexto").textContent = v;
+  };
+});
+$("confirmarPuntuar").onclick = function(){ jugar(M.PUNTUAR, +$("monto").value); };
+$("cancelarPuntuar").onclick = function(){
+  $("zonaPuntuar").classList.add("oculto");
+  $("zonaJugadas").classList.remove("oculto");
+};
+$("btnPista").onclick = pedirPista;
+$("empezar").onclick = empezar;
+
+try {
+  mundo = A.cargar(window.GOLD_DICE_DATA);
+  $("nombre").value = nombreGuardado();
+  $("estadoCarga").textContent = mundo.agentes.length + " agentes cargados, listos.";
+  armarInicio();
+} catch(err){
+  $("estadoCarga").innerHTML = '<span style="color:var(--tormenta)">No se pudieron cargar los agentes: ' +
+    escapar(err.message) + '</span>';
+  $("empezar").disabled = true;
+}
+})();
+</script>
+</body>
+</html>

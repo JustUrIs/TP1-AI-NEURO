@@ -282,16 +282,26 @@ informe está escrito a mano: todos salen de correr esto.
 
 ### El juego web
 
-**`export_web.py`** convierte los agentes entrenados y el oráculo a archivos binarios chicos que el
-navegador puede leer. Todo pesa 1,9 MB comprimido.
+**`export_game.py`** empaqueta los agentes y el oráculo en un solo archivo que el navegador puede
+leer sin pedirle nada a ningún servidor.
 
-La carpeta `web/` tiene el juego. Está verificado de dos maneras, y las dos encontraron cosas:
+La carpeta `juego/` tiene el juego: HTML, CSS y JavaScript sueltos, sin nada que instalar. Se abre
+con doble clic.
 
-- **El motor contra `env.py`**: 60 partidas, 14.460 comparaciones, 0 diferencias.
-- **Las políticas contra los agentes de Python**: 6.600 situaciones. Esta encontró un error real —
-  al comprimir los números perdíamos diferencias de 0.03 puntos entre jugadas, y los agentes del
-  navegador elegían distinto que los de Python en el 0.4 % de los casos, sin dar ningún error y sin
-  que se notara jugando.
+Está verificado de cinco maneras, y **tres de ellas encontraron errores reales que jugando no se
+notaban**:
+
+| Chequeo | Qué error atrapa | Resultado |
+|---|---|---|
+| El motor contra `env.py` | que el juego del navegador difiera del que entrenó a los agentes | 14.460 comparaciones, 0 diferencias |
+| Las políticas contra Python | que empaquetar los pesos corrompiera alguna jugada | 6.600 estados, los tres al 100 % |
+| Partidas completas | un agente roto de una forma que no se ve estado por estado | coinciden con el informe |
+| Habilidad + suerte | que la descomposición no cierre | exacta en 60 partidas |
+| La interfaz | un `id` roto, una función sin definir | completa dos partidas |
+
+Los tres errores fueron: una compresión que borraba diferencias de 0,03 puntos entre jugadas; un
+agente que elegía mal cuando su jugada preferida no era legal en ese momento; y otro que usaba una
+acción con la que nunca había entrenado. Ninguno daba error, y ninguno se veía jugando.
 
 **`package.py`** arma el ZIP de entrega: verifica que `env.py` y `config.py` sigan intactos, copia
 todo a una carpeta vacía, y **prueba ahí que el agente corra solo** antes de comprimir.

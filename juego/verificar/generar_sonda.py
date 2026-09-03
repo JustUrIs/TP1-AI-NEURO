@@ -68,7 +68,7 @@ def probe() -> list[dict]:
 
 if __name__ == "__main__":
     rows = probe()
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "policy_probe.json")
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sonda.json")
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(rows, fh, separators=(",", ":"))
     print(f"{len(rows)} estados -> {out}")

@@ -53,7 +53,7 @@ que identificó la causa real — qué estados se visitan, no cuántas veces.
 gold_dice_rl/     el TP. env.py y config.py son de la cátedra y están intactos
 informe/          informe.tex / .pdf (3 páginas) y apéndice técnico (8)
 docs/             plan, análisis del ambiente y resultados completos
-web/              el juego en el navegador
+juego/            el juego, en HTML puro (doble clic y anda)
 package.py        arma el ZIP de entrega y lo prueba en carpeta limpia
 ```
 
@@ -77,9 +77,10 @@ print(evaluate(GoldDiceAgent(), n_episodes=1000, seed=0))
 
 ## El juego
 
-`web/` es el juego jugable: solo, contra el Campeón, o contra los tres agentes a
-la vez. Al terminar la partida se analiza contra la solución exacta y se separa
-**cuánto de tu resultado fue decisión y cuánto fue suerte**:
+`juego/index.html` se abre con doble clic: no necesita servidor, ni instalación,
+ni internet. Jugás solo, contra el Campeón, o contra los tres agentes a la vez.
+Al terminar se analiza tu partida contra la solución exacta y se separa **cuánto
+de tu resultado fue decisión y cuánto fue suerte**:
 
 ```
 arrepentimiento = V*(antes) − [ puntos + V*(después) ]     ≥ 0, cero si jugaste óptimo
@@ -90,8 +91,9 @@ Las dos suman tu puntaje final, exacto. El leaderboard tiene doble ranking, y el
 de decisiones no se puede farmear volviendo a tirar.
 
 Los agentes corren enteros en el navegador y explican cada jugada con los
-números que realmente calcularon, sin llamar a ninguna API. Instrucciones y
-deploy en [`web/README.md`](web/README.md).
+números que realmente calcularon, sin llamar a ninguna API. No te marcamos la
+jugada buena antes de que elijas —eso arruina el juego—: te la mostramos después,
+con lo que costó la diferencia. Detalle en [`juego/LEEME.md`](juego/LEEME.md).
 
 ## Verificación
 
@@ -101,18 +103,20 @@ Nada de lo de arriba se afirma sin comprobarlo.
 |---|---|---|
 | `env.py` y `config.py` intactos | `filecmp` byte a byte en `package.py` | idénticos |
 | La entrega corre sola | carpeta limpia + `evaluate_agents.py` original | sin intervención manual |
-| El motor del navegador | 60 partidas con azar guionado contra `env.py` | 14.460 comparaciones, **0 discrepancias** |
-| Las políticas exportadas | 6.600 estados contra los agentes de Python | Campeón 6600/6600 |
+| El motor del navegador | 60 partidas con azar guionado contra `env.py` | 14.460 comparaciones, **0 diferencias** |
+| Las políticas exportadas | 6.600 estados contra los agentes de Python | **los tres al 100 %** |
+| La interfaz del juego | dos partidas completas con un DOM simulado | sin errores |
 | Sin sobreajuste | tres bandas de semillas disjuntas | 527.06 / 526.27 / 525.42 |
 
-La verificación de políticas encontró un bug real: la cuantización a `int16` con
-escala 10 borraba diferencias de 0.03–0.1 puntos entre acciones y hacía que los
-agentes tabulares jugaran distinto en el navegador, sin dar ningún error y sin
-que se notara jugando.
+Esas verificaciones encontraron **tres errores reales** que jugando no se
+notaban: una cuantización que borraba diferencias de 0,03 puntos entre jugadas,
+un agente que elegía mal cuando su jugada preferida no era legal en ese momento,
+y otro que usaba una acción con la que nunca había entrenado.
 
 ```bash
-cd web && npm run verify
-python package.py
+python package.py                    # verifica y arma la entrega
+node juego/verificar/verificar.js    # motor, políticas y partidas completas
+node juego/verificar/simular_ui.js   # la interfaz, sin navegador
 ```
 
 ## Lectura
