@@ -134,17 +134,6 @@ def compare(agents: dict, n_episodes: int = 20_000, band: str = "desarrollo") ->
     return results
 
 
-def significantly_better(a: Result, b: Result) -> bool:
-    """
-    Test de Welch de dos muestras. Devuelve True solo si la diferencia sobrevive
-    al ruido de muestreo (p < 0.05, dos colas). Sirve para no cantar victoria
-    con diferencias que son ruido.
-    """
-    diff = a.mean - b.mean
-    se = math.sqrt(a.stderr**2 + b.stderr**2)
-    return se > 0 and abs(diff) / se > 1.96 and diff > 0
-
-
 if __name__ == "__main__":
     from agents import RandomLegalAgent, SimpleExpectancyAgent
     from oracle_dp import OracleAgent

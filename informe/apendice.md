@@ -2,12 +2,10 @@
 
 **Gold Dice RL — Trabajo Práctico 1 — Aprendizaje por Refuerzos**
 
-El informe tiene un tope de tres páginas. Este apéndice guarda el material que no entra: el
-análisis línea por línea del ambiente, y la tabla completa de resultados y ablaciones con sus
-intervalos de confianza.
+El informe tiene un tope de tres páginas. Acá está el material que no entra: el análisis del
+ambiente línea por línea, y la tabla completa de resultados con sus intervalos de confianza.
 
-Nada de lo que está acá hace falta para leer el informe. Todo lo que está acá es reproducible con
-los scripts del paquete entregado.
+Nada de esto hace falta para leer el informe, y todo es reproducible con los scripts del paquete.
 
 ---
 

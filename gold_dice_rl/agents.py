@@ -69,84 +69,71 @@ class SimpleExpectancyAgent:
 
 
 # ==========================================================================
-# Agentes propios
+# Nuestros agentes
 #
-# El agente que se entrega al torneo es GoldDiceAgent (mas abajo): un agente
-# de TD tabular sobre afterstates, entrenado unicamente jugando contra el
-# ambiente. Carga sus pesos de artifacts/ y juega greedy, sin intervencion
-# manual y sin aleatoriedad.
-#
-# Ver:
-#   afterstate.py            representacion y transiciones deterministas
-#   value_table.py           tabla de valores (residuo sobre un potencial)
-#   train_afterstate.py      entrenamiento
-#   oracle_dp.py             solver exacto -- NO es un agente de aprendizaje,
-#                            se usa solo para medir y diagnosticar
+# El que se entrega al torneo es GoldDiceAgent. Los dos comparten la misma
+# forma de elegir jugada y se diferencian solo en la tabla de valores que
+# consultan, asi que esa logica vive una sola vez, en _AfterstatePolicy.
 # ==========================================================================
 
 import os
 
-_ARTIFACTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "artifacts")
+from afterstate import apply as apply_action, legal_actions
+from value_table import ValueTable
+
+ARTIFACTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "artifacts")
+DEFAULT_WEIGHTS = os.path.join(ARTIFACTS, "gold_dice_agent.pkl")
 
 
-class GoldDiceAgent:
+class _AfterstatePolicy:
     """
-    Agente entregado al torneo.
+    Elige la jugada mirando en que estado te deja cada opcion.
 
-    TD tabular sobre afterstates con gamma = 1. Aprende V(estado posterior a la
-    accion) y elige
+    La idea: en este juego lo que hace tu accion es totalmente predecible
+    (pagar 42 y sumar un dado es aritmetica). El azar viene despues. Entonces
+    para cada jugada posible calculamos donde quedariamos, le preguntamos a la
+    tabla cuanto vale ese lugar, le sumamos los puntos que cobramos en el acto,
+    y nos quedamos con la mejor suma.
 
-        accion = argmax_a [ puntos_inmediatos(a) + V(afterstate(a)) ]
-
-    Todo lo que sabe salio de jugar: el ambiente nunca le dijo las
-    probabilidades de tormenta ni la distribucion de los dados.
+        jugada = la que maximiza   puntos_ahora + valor_del_estado_resultante
     """
 
-    def __init__(self, weights_path=None):
-        from value_table import ValueTable
-        from afterstate import apply as _apply, legal_actions as _legal
-
-        if weights_path is None:
-            weights_path = os.path.join(_ARTIFACTS, "gold_dice_agent.pkl")
-        self._table = ValueTable.load(weights_path)
-        self._apply = _apply
-        self._legal = _legal
+    def __init__(self, table: ValueTable):
+        self.table = table
 
     def act(self, obs, env=None):
-        best_action, best_value, best_amount = None, float("-inf"), None
-        for action in self._legal(obs):
-            after, points, amount = self._apply(obs, action)
-            total = points + self._table.value(after)
-            if total > best_value:
-                best_action, best_value, best_amount = action, total, amount
+        best_action, best_total, best_amount = None, float("-inf"), None
+        for action in legal_actions(obs):
+            after, points, amount = apply_action(obs, action)
+            total = points + self.table.value(after)
+            if total > best_total:
+                best_action, best_total, best_amount = action, total, amount
         return best_action, best_amount
 
 
-class PotentialAgent:
+class GoldDiceAgent(_AfterstatePolicy):
     """
-    Control: la misma politica greedy sobre afterstates pero con el residuo en
-    cero, o sea usando SOLO el potencial analitico
+    El agente que entregamos.
 
-        Phi = oro + guardado + turnos_restantes * dados * (3.5 + bonus)
+    Aprendio jugando: nadie le dijo la probabilidad de tormenta ni como estan
+    hechos los dados. Carga los pesos que dejo el entrenamiento y juega siempre
+    su mejor jugada, sin azar y sin que nadie lo ayude.
+    """
 
-    No aprende nada. Existe para separar "cuanto viene del diseño de la
-    representacion" de "cuanto viene del aprendizaje". Sin este control, el
-    puntaje del agente entrenado no se puede atribuir.
+    def __init__(self, weights_path: str = DEFAULT_WEIGHTS):
+        super().__init__(ValueTable.load(weights_path))
+
+
+class PotentialAgent(_AfterstatePolicy):
+    """
+    El mismo agente pero SIN nada aprendido: la tabla arranca vacia, asi que
+    solo usa la cuenta a mano ("si no compro nada mas, cuanto saco al final").
+
+    Existe para poder responder una pregunta incomoda: de los puntos que saca
+    el agente entrenado, cuantos vienen de haber aprendido y cuantos vienen de
+    como escribimos el problema. Sin este control no se puede separar una cosa
+    de la otra.
     """
 
     def __init__(self):
-        from value_table import ValueTable
-        from afterstate import apply as _apply, legal_actions as _legal
-
-        self._table = ValueTable()
-        self._apply = _apply
-        self._legal = _legal
-
-    def act(self, obs, env=None):
-        best_action, best_value, best_amount = None, float("-inf"), None
-        for action in self._legal(obs):
-            after, points, amount = self._apply(obs, action)
-            total = points + self._table.value(after)
-            if total > best_value:
-                best_action, best_value, best_amount = action, total, amount
-        return best_action, best_amount
+        super().__init__(ValueTable())

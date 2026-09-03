@@ -26,10 +26,10 @@
 
 \titleformat{\section}{\normalfont\bfseries\color{acento}\large}{\thesection.}{0.5em}{}
 \titlespacing*{\section}{0pt}{6pt plus 1pt minus 1pt}{2pt}
-\linespread{0.95}
-\setlength{\parskip}{2.0pt}
+\linespread{0.94}
+\setlength{\parskip}{1.7pt}
 \setlength{\parindent}{0pt}
-\renewcommand{\arraystretch}{1.06}
+\renewcommand{\arraystretch}{1.0}
 
 % Números alineados en las tablas.
 \newcolumntype{N}{>{\raggedleft\arraybackslash}p{1.9cm}}
@@ -91,18 +91,20 @@ El control negativo confirma que la medición discrimina: prohibir ``puntuar tod
 mitad baja el óptimo a 641.33. Trabajamos entonces con seis acciones discretas, y esa reducción
 está medida, no supuesta.
 
-\textbf{Estado.} No aprendemos $Q(\text{estado},\text{acción})$ sino $V(\text{afterstate})$: el
-valor del estado \textbf{posterior a la acción}. En este juego el efecto de una acción es
-completamente determinista ---pagar 42 de oro y sumar un dado es aritmética--- y todo el azar
-viene después. Cuando pasa eso, conviene aprender el afterstate (Sutton \& Barto §6.8; es la
-representación de TD-Gammon). Muchos pares (estado, acción) distintos caen en el mismo afterstate
-y comparten experiencia, y \texttt{roll\_max} desaparece del estado aprendido.
+\textbf{Estado.} Lo habitual es aprender ``qué tan buena es esta jugada en esta situación''.
+Nosotros aprendemos otra cosa: \textbf{qué tan bueno es el lugar donde quedás después de jugar}.
+El motivo es que en este juego lo que hace tu acción es totalmente predecible ---pagar 42 de oro y
+sumar un dado es aritmética, no tiene azar--- y el azar recién aparece después, con la tormenta y
+la tirada siguiente. Cuando el problema tiene esa forma conviene aprender el estado resultante, que
+en la literatura se llama \emph{afterstate} (Sutton \& Barto §6.8; es la representación con la que
+se hizo TD-Gammon). La ganancia es concreta: muchas situaciones distintas terminan en el mismo
+lugar y comparten aprendizaje, así que hacen falta muchas menos partidas.
 
-El afterstate es (turno, oro, dados, bonus, escudos). El oro va en una \textbf{grilla no uniforme
-con interpolación lineal}: de a 1 entre 0 y 96, donde viven todos los umbrales de compra (4, 5, 8,
-16, 18, 24, 26, \dots, 82, 90), y cada vez más gruesa arriba, donde no hay umbrales. Con buckets
-comunes, 41 y 42 de oro caen en la misma celda y el agente no distingue ``puedo comprar el dado''
-de ``no puedo''.
+El estado que aprendemos es (turno, oro, dados, bonus, escudos). El oro llega hasta 800 y no
+puede tener una casilla por valor, pero tampoco se puede agrupar de a diez: los precios del juego
+son 18, 26, 34, 42\dots, y si 41 y 42 caen en la misma casilla \textbf{el agente no distingue
+``puedo comprar el dado'' de ``no puedo''}. Usamos entonces una grilla fina abajo (de a 1 hasta 96,
+donde están todos los precios) y cada vez más gruesa arriba, interpolando entre puntos.
 
 \textbf{Recompensa.} La nativa, sin modificar: los puntos al puntuar. Lo que sí cambiamos es la
 \textbf{parametrización del valor}:
@@ -110,35 +112,47 @@ de ``no puedo''.
 V(f) = \Phi(f) + R(f), \qquad
 \Phi = \text{oro} + \text{guardado} + 5\,\text{escudos} + \text{turnos restantes}\cdot\text{dados}\cdot(3.5+\text{bonus})
 \]
-y la tabla guarda $R$, no $V$. $\Phi$ es contabilidad: caja, más activos a valor de costo, más el
-ingreso futuro si no se compra nada más. La razón es de señal contra ruido: el retorno de un
-episodio tiene desviación típica de ${\sim}130$ puntos, y las decisiones de los primeros turnos
-valen 1 o 2. Aprender $V$ directo es medir 1 punto adentro de 130 de ruido. $\Phi$ absorbe la
-parte grande y predecible; sobre $R$ las mismas muestras rinden muchísimo más. Es \emph{reward
-shaping} basado en potencial (Ng, Harada \& Russell, 1999) escrito como reparametrización, así que
-la política óptima no cambia: $\Phi$ mueve el punto de partida de la búsqueda, no su destino.
+y la tabla guarda $R$, no $V$: calculamos a mano la parte fácil y que la tabla aprenda solo la
+corrección. $\Phi$ es pura contabilidad: la plata que tenés, los activos a lo que costaron, y lo
+que van a producir tus dados si no comprás nada más.
+
+El motivo es de señal contra ruido. Una partida puede terminar en 300 o en 900 ---la desviación es
+de unos 130 puntos--- y las decisiones de los primeros turnos valen 1 o 2. Aprender $V$ directo es
+tratar de medir 1 punto adentro de 130 de ruido, y no converge en ningún presupuesto razonable.
+$\Phi$ se lleva la parte grande y predecible, y sobre lo que queda las mismas partidas rinden
+muchísimo más. Cuánto importa: \textbf{sin esto el agente saca 105 puntos; con esto, 527}. La
+técnica se llama \emph{potential-based reward shaping} (Ng, Harada \& Russell, 1999) y tiene un
+teorema detrás que garantiza que no cambia cuál es la política óptima: $\Phi$ mueve desde dónde
+arranca la búsqueda, no adónde llega.
 
 % ---------------------------------------------------------------------------
 \section{Algoritmo e hiperparámetros}
 
-Control TD off-policy sobre afterstates ---Q-Learning, escrito sobre otro espacio--- con
-\textbf{Double learning} (van Hasselt, 2010): dos tablas, una elige la mejor acción y la otra la
-valúa.
+Es Q-Learning, escrito sobre el estado resultante en vez de sobre el par (situación, jugada).
+Mantiene lo esencial: el agente aprende cuál habría sido la mejor jugada aunque en ese momento haya
+probado otra, que es lo que se llama aprendizaje \emph{off-policy}.
 
-Lo agregamos porque la versión de una sola tabla \textbf{empeoraba con más entrenamiento}:
-81.0\,\% del óptimo a 250 mil episodios, 80.0\,\% a 500 mil, 79.5\,\% a 750 mil. Eso no es ruido,
-es monótono. Es sesgo de maximización: el objetivo es un \texttt{max} sobre valores estimados con
-ruido, y el máximo de variables ruidosas supera sistemáticamente al máximo de sus medias. El sesgo
-se concentra en los estados poco visitados, y la política greedy se deja arrastrar hacia ellos.
+Le agregamos una segunda tabla, y el motivo fue un síntoma raro: la versión de una sola tabla
+\textbf{empeoraba cuanto más entrenaba} ---81.0\,\% del óptimo a 250 mil partidas, 80.0\,\% a 500
+mil, 79.5\,\% a 750 mil. No es ruido: baja siempre.
+
+La causa es que el agente se pregunta ``¿cuál es mi mejor jugada?'' y se queda con el valor de esa
+mejor. Pero sus valores son estimaciones con error, y \textbf{quedarse siempre con el máximo de
+varios números que tienen error da un resultado más alto que la realidad}. El error se concentra
+justo donde menos datos hay, así que el agente termina persiguiendo lugares que parecen buenos solo
+porque están mal medidos, y con más entrenamiento se refuerza. Se llama sesgo de maximización, y la
+solución de manual es \textbf{Double learning} (van Hasselt, 2010): dos tablas, una elige cuál es
+la mejor jugada y la otra dice cuánto vale. Como sus errores son independientes, el sesgo se
+cancela.
 
 \vspace{2pt}
-{\small
+{\footnotesize
 \begin{tabular}{@{}l l p{11.2cm}@{}}
 \toprule
 \textbf{Hiperparámetro} & \textbf{Valor} & \textbf{Por qué} \\
 \midrule
 $\gamma$ & \textbf{1} & Horizonte finito, fijo y conocido: no hay nada que descontar. Con $\gamma=0.995$ el pago del turno 30 se multiplica por 0.865, en un juego cuyo único cobro grande es ese. \\
-$\alpha$ & $\max(0.002,\ (1{+}v)^{-0.5})\times 0.015$ & Robbins-Monro \textbf{por peso}. Un $\alpha$ global obliga a elegir entre aprender rápido lo frecuente y aprender bien lo raro. \\
+$\alpha$ & $\max(0.002,\ (1{+}v)^{-0.5})\times 0.015$ & Cada casilla lleva su propio contador $v$ de visitas: las que vio mil veces se mueven poco, las nuevas se mueven mucho. Un $\alpha$ único obliga a elegir entre aprender rápido lo frecuente y aprender bien lo raro. \\
 $\varepsilon$ & $0.15 \to 0.02$ & Lineal en el 60\,\% del entrenamiento. Barrido de 11 configuraciones; más exploración empeora. \\
 $\lambda$ & \textbf{0} & Probamos trazas de elegibilidad ($\lambda = 0.3,\ 0.5,\ 0.9$). Todas empeoraron. \\
 episodios & hasta $3\times10^{6}$ & Mejor checkpoint según la banda de desarrollo; el máximo cae cerca de $4\times10^{5}$ (§6). \\
@@ -154,7 +168,7 @@ Semillas: el entrenamiento usa un rango disjunto de las tres bandas de evaluaci�
 $n = 20.000$ episodios, intervalo de confianza al 95\,\%, banda de desarrollo.
 
 \vspace{2pt}
-{\small
+{\footnotesize
 \begin{tabular}{@{}l N N N@{}}
 \toprule
 \textbf{Agente} & \textbf{Media} & \textbf{IC 95\,\%} & \textbf{\% óptimo} \\
@@ -177,14 +191,11 @@ Medido en las tres, el agente final da 527.06 (desarrollo, donde se decidió tod
 (control, mirada una sola vez) y 525.42 (pública, la del enunciado). La diferencia entre
 desarrollo y control es $+0.80$ con error estándar 1.37: ruido.
 
-Un detalle metodológico que cambia cómo se leen estas tablas: en \texttt{env.py} un
-\textbf{único} generador sirve los dados y las tormentas, y
-\texttt{rng.choice(size=num\_dice)} consume una cantidad que depende de la política. Desde el
-primer turno en que dos agentes difieren en cantidad de dados, sus flujos de azar se
-desincronizan. \textbf{No existen números aleatorios comunes en este ambiente}, y no se pueden
-conseguir sin tocar \texttt{env.py}. Con $n=1000$ y $\sigma \approx 100$ el intervalo mide
-$\pm 6.3$: una diferencia de 4 puntos en el leaderboard no es una diferencia. Por eso usamos
-$n = 20.000$.
+Por qué 20.000 y no las 1000 del enunciado: con $\sigma \approx 100$, mil partidas dan un margen
+de $\pm 6.3$ puntos, o sea que \textbf{una diferencia de 4 puntos entre dos agentes no es una
+diferencia}. Y acá no se puede usar el truco habitual de comparar sobre el mismo azar, porque en
+\texttt{env.py} el mismo generador sirve los dados y las tormentas y la cantidad de dados depende
+de la política (§7). La única defensa contra el ruido es el tamaño de muestra.
 
 % ---------------------------------------------------------------------------
 \section{Ablaciones: qué costó cada decisión}
@@ -192,7 +203,7 @@ $n = 20.000$.
 Mismo presupuesto (400 mil episodios), cambiando una cosa por vez.
 
 \vspace{2pt}
-{\small
+{\footnotesize
 \begin{tabular}{@{}l N N N@{}}
 \toprule
 \textbf{Cambio} & \textbf{De} & \textbf{A} & \textbf{$\Delta$} \\
@@ -221,22 +232,22 @@ resolviendo un problema de horizonte. Quien mire solo el número concluye ``$\ga
 mejor'' y se lleva la lección al revés.
 
 Y la descomposición incómoda, que reportamos porque es verdad: de los 527 puntos, \textbf{490
-vienen del diseño de la representación y 37 del aprendizaje}. Sin el control ``$\Phi$ solo'' le
-habríamos atribuido al algoritmo un mérito que es del modelado. El inverso también importa: apagar
-$\Phi$ hunde al agente a 105, así que la representación sin aprendizaje tampoco alcanza.
+vienen de cómo escribimos el problema y 37 del aprendizaje}. Sin el control ``$\Phi$ solo'' le
+habríamos atribuido al algoritmo un mérito que es del modelado.
 
 % ---------------------------------------------------------------------------
 \section{Qué no funcionó, y por qué}
 
-Faltan 116 puntos hasta el óptimo. Con el oráculo se puede calcular el \textbf{arrepentimiento}
-exacto de cada jugada ---$V^{*}(s) - [\,r + \mathbb{E}\,V^{*}(s')\,]$, cero si la jugada es
-óptima--- y ver dónde están.
+Faltan 116 puntos hasta el óptimo, y con el oráculo se puede ver exactamente dónde. Para cada
+jugada calculamos cuánto valor destruyó: lo que valía la situación antes, menos lo que vale después
+de jugar. Da cero si jugaste óptimo y nunca da negativo. Es lo que se llama
+\textbf{arrepentimiento}: $V^{*}(s) - [\,r + \mathbb{E}\,V^{*}(s')\,]$.
 
 El error dominante es no comprar el escudo del turno 23: el agente termina con 0.01 escudos de
 media contra 0.73 del óptimo, y por eso acumula 183 de oro final contra 484. Es un \textbf{óptimo
 local de política}: el escudo solo rinde si después acumulás, y acumular solo conviene si tenés
-escudo. Salir de ahí exige cambiar dos decisiones a la vez, y $\varepsilon$-greedy explora
-desviaciones de un paso. Probamos tres esquemas pensados para eso ---$\varepsilon$ por episodio
+escudo. Salir de ahí exige cambiar dos decisiones a la vez, y la exploración estándar prueba una
+cosa por vez: compra el escudo, ve que con su forma de jugar no le sirve, y lo descarta. Probamos tres esquemas pensados para eso ---$\varepsilon$ por episodio
 estilo Ape-X, $\varepsilon$-z-greedy con exploración temporalmente extendida (Dabney et al., 2020),
 y $\varepsilon$ alto sostenido--- y \textbf{ninguno lo rompió}.
 
@@ -259,7 +270,7 @@ muestras representativas.
 
 \vspace{2pt}
 \begin{center}
-\includegraphics[width=0.88\linewidth]{figura.png}
+\includegraphics[width=0.82\linewidth]{figura.png}
 \end{center}
 \vspace{-6pt}
 {\footnotesize\color{tenue} Izquierda: el agente construye un motor casi igual al óptimo pero no
@@ -294,12 +305,11 @@ hasta cobrar 463 de oro de una sola vez en el turno 30.
 % ---------------------------------------------------------------------------
 \section{Qué sigue y qué aprendimos}
 
-\textbf{Qué sigue.} El experimento de §6 dice dónde apretar y dónde no: más episodios no sirve. Lo
-que falta es cubrir estados que la política actual no visita. Dos caminos concretos: exploración
-profunda con funciones de valor aleatorizadas (Osband et al.), que genera desviaciones coherentes
-de varios pasos en vez de una sola; y aproximación de función con rasgos que generalicen entre
-(dados, bonus) vecinos en lugar de una celda por combinación, para que el valor del estado con
-escudo se aprenda en parte desde estados parecidos sin tener que visitarlo.
+\textbf{Qué sigue.} El experimento de §6 dice dónde apretar y dónde no: más partidas no sirve, hay
+que cubrir estados que la política actual nunca visita. Dos caminos: exploración profunda con
+funciones de valor aleatorizadas (Osband et al.), que produce desviaciones sostenidas de varios
+turnos en vez de una sola; y una red en lugar de una tabla, para que el valor del estado con escudo
+se aprenda en parte desde estados parecidos sin tener que visitarlo.
 
 \textbf{Qué aprendimos.} Tres cosas, en orden de cuánto nos sorprendieron.
 

@@ -257,39 +257,35 @@ def get(path: str = ORACLE_PATH) -> np.ndarray:
 # --------------------------------------------------------------------------
 # Consultas: valor de cada accion en un estado concreto
 # --------------------------------------------------------------------------
-def _clamp(gold: int, n: int, b: int, s: int) -> tuple[int, int, int, int]:
-    return min(int(gold), GMAX), min(int(n), NMAX), min(int(b), BMAX), min(int(s), SMAX)
-
-
-def end_of_turn_value(U: np.ndarray, t: int, gold: int, n: int, b: int, s: int, carry: int = 0) -> float:
+def tail_values(
+    U: np.ndarray, t: int, golds: np.ndarray, n: int, b: int, s: int, carry: int = 0
+) -> np.ndarray:
     """
-    Puntos esperados desde el final del turno t (post-accion, pre-tormenta),
-    quedandose con `gold` de oro, maquinaria (n, b, s) y `carry` guardado.
+    Cuanto vale terminar el turno `t` con cada uno de esos montos de oro.
+
+    Integra las dos cosas que pasan despues de tu jugada: la tormenta (15 %) y
+    la tirada del turno siguiente. `carry` es lo guardado por STORE_BEST_DIE,
+    que entra al oro recien en la tirada siguiente -- o sea DESPUES de la
+    tormenta, y por eso no se puede partir al medio.
     """
-    if t >= HORIZON:
-        return 0.0                      # despues del turno 30 no hay nada
-    gold, n, b, s = _clamp(gold, n, b, s)
-    keep = min(gold + carry, GMAX)
-    value = (1.0 - STORM_PROB) * U[t + 1, n, b, s, keep]
-    if s > 0:
-        value += STORM_PROB * U[t + 1, n, b, s - 1, keep]
-    else:
-        value += STORM_PROB * U[t + 1, n, b, 0, min(gold // 2 + carry, GMAX)]
-    return float(value)
-
-
-def _tail_vec(U: np.ndarray, t: int, golds: np.ndarray, n: int, b: int, s: int) -> np.ndarray:
-    """Version vectorizada de `end_of_turn_value` sobre un vector de oro."""
     if t >= HORIZON:
         return np.zeros(len(golds))
     n, b, s = min(n, NMAX), min(b, BMAX), min(s, SMAX)
-    keep = np.minimum(golds, GMAX)
+    keep = np.minimum(golds + carry, GMAX)
     value = (1.0 - STORM_PROB) * U[t + 1, n, b, s][keep]
     if s > 0:
+        # El escudo absorbe la tormenta: el oro no se toca, se pierde un escudo.
         value = value + STORM_PROB * U[t + 1, n, b, s - 1][keep]
     else:
-        value = value + STORM_PROB * U[t + 1, n, b, 0][np.minimum(golds // 2, GMAX)]
+        value = value + STORM_PROB * U[t + 1, n, b, 0][np.minimum(golds // 2 + carry, GMAX)]
     return value
+
+
+def end_of_turn_value(
+    U: np.ndarray, t: int, gold: int, n: int, b: int, s: int, carry: int = 0
+) -> float:
+    """La misma cuenta que `tail_values`, para un solo monto de oro."""
+    return float(tail_values(U, t, np.array([min(int(gold), GMAX)]), n, b, s, carry)[0])
 
 
 def action_values(obs: dict, U: np.ndarray | None = None) -> dict:
@@ -319,7 +315,7 @@ def action_values(obs: dict, U: np.ndarray | None = None) -> dict:
     # quedamos con el mejor. Es O(oro), vectorizado, y es EXACTO: la cantidad a
     # puntuar nunca se discretiza.
     keeps = np.arange(min(gold, GMAX) + 1)
-    tails = _tail_vec(U, t, keeps, n, b, s)
+    tails = tail_values(U, t, keeps, n, b, s)
     total = (gold - keeps) + tails
     best_i = int(np.argmax(total))
     out[SCORE] = (float(total[best_i]), int(gold - keeps[best_i]))
@@ -339,11 +335,6 @@ def action_values(obs: dict, U: np.ndarray | None = None) -> dict:
         out[STORE_BEST_DIE] = (tail(gold - STORE_DIE_COST, n, b, s, carry=roll_max), None)
 
     return out
-
-
-def state_value(obs: dict, U: np.ndarray | None = None) -> float:
-    """V*(s): puntos esperados desde este estado bajo juego perfecto."""
-    return max(v for v, _ in action_values(obs, U).values())
 
 
 class OracleAgent:
