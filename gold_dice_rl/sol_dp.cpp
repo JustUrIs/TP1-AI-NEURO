@@ -1,10 +1,4 @@
-#include <algorithm>
-#include <cmath>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <utility>
-#include <vector>
+#include <bits/stdc++.h>
 using namespace std;
 
 // DP exacta sobre una grilla finita. El estado es (turno, dados, bonus,

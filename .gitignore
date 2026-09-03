@@ -10,6 +10,9 @@ gold_dice_rl/artifacts/*
 gold_dice_rl/sol_dp
 gold_dice_rl/sol_dp.exe
 juego/verificar/
+informe/*.aux
+informe/*.log
+informe/*.out
 
 # --- trabajo de terceros -----------------------------------------------------
 # La entrega de otro grupo, usada solo como referencia local. No se publica.

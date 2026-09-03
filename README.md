@@ -6,8 +6,10 @@ El agente entregado usa Q-Learning tabular sobre *afterstates* con Double Q-Lear
 
 ## Entrega
 
+- `TP1_GoldDiceRL_entrega.zip`: archivo final preparado para subir al campus.
 - `gold_dice_rl/`: los seis archivos provistos, tres `.py` propios, `sol_dp.cpp` y los pesos entrenados.
-- `informe/informe.md`: único informe principal.
+- `informe/informe.tex`: fuente LaTeX del informe principal.
+- `informe/informe.pdf`: informe final de tres carillas.
 - `docs/01_REGLAS_OCULTAS.md`: casos borde del ambiente.
 - `docs/02_RESULTADOS.md`: resultados y experimentos completos.
 - `docs/03_QUE_CONSTRUIMOS.md`: inventario y justificación de cada archivo.
